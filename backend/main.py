@@ -1,0 +1,51 @@
+"""
+FastAPI backend for Psychological Report Generator
+"""
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from api import reports, documents, templates, ai
+from database.db import init_db
+
+app = FastAPI(
+    title="Psychological Report Generator API",
+    description="Offline API for generating psychological reports",
+    version="1.0.0"
+)
+
+# CORS middleware for local Electron app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
+app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
+app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    init_db()
+
+@app.get("/")
+async def root():
+    return {"message": "Psychological Report Generator API", "status": "running"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )
