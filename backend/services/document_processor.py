@@ -4,6 +4,18 @@ Document processing service for extracting text from various file formats
 from pathlib import Path
 from typing import Optional
 
+WORD_MIME_TYPES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
+
+
+def is_word_doc(file_path: Path, content_type: Optional[str]) -> bool:
+    if content_type in WORD_MIME_TYPES:
+        return True
+
+    return file_path.suffix.lower() in {".doc", ".docx"}
+
 async def process_document(file_path: Path, content_type: Optional[str]) -> str:
     """
     Process a document and extract text content
@@ -25,8 +37,8 @@ async def process_document(file_path: Path, content_type: Optional[str]) -> str:
         elif content_type == "application/pdf":
             return await extract_pdf_text(file_path)
         
-        # Handle Word documents
-        elif content_type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+        # Handle Word documents (by MIME or extension)
+        elif is_word_doc(file_path, content_type):
             return await extract_docx_text(file_path)
         
         # Default: try to read as text
