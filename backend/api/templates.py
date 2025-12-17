@@ -28,13 +28,12 @@ class TemplateResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 @router.post("/", response_model=TemplateResponse)
 async def create_template(template: TemplateCreate, db: Session = Depends(get_db)):
     """Create a new template"""
-    db_template = Template(**template.dict())
+    db_template = Template(**template.model_dump())
     db.add(db_template)
     db.commit()
     db.refresh(db_template)
@@ -61,7 +60,7 @@ async def update_template(template_id: int, template: TemplateCreate, db: Sessio
     if not db_template:
         raise HTTPException(status_code=404, detail="Template not found")
     
-    for key, value in template.dict().items():
+    for key, value in template.model_dump().items():
         setattr(db_template, key, value)
     
     db.commit()
