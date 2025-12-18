@@ -10,3 +10,5 @@ pytest-asyncio>=0.21.0
 pytest-cov>=4.1.0
 PyPDF2>=3.0.0
 python-docx>=0.8.11
+textract>=1.0.0
+pdfplumber>=0.7.6

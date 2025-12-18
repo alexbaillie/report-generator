@@ -3,18 +3,11 @@ Document processing service for extracting text from various file formats
 """
 from pathlib import Path
 from typing import Optional
+from PyPDF2 import PdfReader
+from docx import Document as DocxDocument
+import textract
+import pdfplumber
 
-# Optional dependencies: import at module level so missing packages produce
-# a clear, single point of failure and can be checked by helper functions.
-try:
-    from PyPDF2 import PdfReader
-except Exception:
-    PdfReader = None
-
-try:
-    from docx import Document as DocxDocument
-except Exception:
-    DocxDocument = None
 
 WORD_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -29,6 +22,7 @@ def is_word_doc(file_path: Path, content_type: Optional[str]) -> bool:
     return file_path.suffix.lower() in {".doc", ".docx"}
 
 async def process_document(file_path: Path, content_type: Optional[str]) -> str:
+
     """
     Process a document and extract text content
     
@@ -92,9 +86,20 @@ async def extract_docx_text(file_path: Path) -> str:
     - For legacy `.doc` files, returns a short message (conversion required).
     - If `python-docx` is not installed, returns a helpful message.
     """
+
     suffix = file_path.suffix.lower()
     if suffix == ".doc":
-        return f"[Legacy .doc files are not supported; please convert {file_path.name} to .docx]"
+        if textract is None:
+            return f"[Legacy .doc extraction requires textract and external dependencies (antiword/catdoc); please install backend/requirements.txt dependencies and system prerequisites]"
+        try:
+            raw = textract.process(str(file_path))
+            if isinstance(raw, bytes):
+                text = raw.decode("utf-8", errors="replace").strip()
+            else:
+                text = str(raw).strip()
+            return text if text else f"[No text found in legacy .doc {file_path.name}]"
+        except Exception as e:
+            return f"[Error extracting legacy .doc: {e}]"
 
     if DocxDocument is None:
         return f"[DOCX extraction requires python-docx; please install backend/requirements.txt dependencies]"
@@ -106,3 +111,82 @@ async def extract_docx_text(file_path: Path) -> str:
         return joined if joined else f"[No text found in Word document {file_path.name}]"
     except Exception as e:
         return f"[Error extracting Word document: {e}]"
+
+
+async def extract_pdf_tables(file_path: Path) -> list:
+    """Extract tables from a PDF using pdfplumber.
+
+    Returns a list of tables; each table is a list of rows, each row is a list of cell strings.
+    """
+    if pdfplumber is None:
+        return []
+
+    try:
+        tables_all: list[list[list[str]]] = []
+        with pdfplumber.open(str(file_path)) as pdf:
+            for page in pdf.pages:
+                page_tables = page.extract_tables()
+                for table in page_tables:
+                    # table is a list of rows; each row is a list of cell values
+                    # Normalize None to empty strings
+                    normalized = [[cell if cell is not None else "" for cell in row] for row in table]
+                    tables_all.append(normalized)
+        return tables_all
+    except Exception:
+        return []
+
+
+async def extract_docx_tables(file_path: Path) -> list:
+    """Extract tables from a .docx using python-docx.
+
+    Returns a list of tables; each table is a list of rows, each row is a list of cell strings.
+    """
+    if DocxDocument is None:
+        return []
+
+    try:
+        doc = DocxDocument(str(file_path))
+        tables_all: list[list[list[str]]] = []
+        for table in doc.tables:
+            rows: list[list[str]] = []
+            for row in table.rows:
+                cells = [cell.text.strip() for cell in row.cells]
+                rows.append(cells)
+            tables_all.append(rows)
+        return tables_all
+    except Exception:
+        return []
+
+
+async def extract_tables_from_document(file_path: Path, content_type: Optional[str]) -> list:
+    """High-level table extraction that dispatches based on MIME or extension.
+
+    - PDF: uses `pdfplumber`.
+    - DOCX: uses `python-docx`.
+    - DOC: attempts to use `textract` but may lose structure.
+    Returns a list of tables (possibly empty).
+    """
+    suffix = file_path.suffix.lower()
+    if content_type == "application/pdf" or suffix == ".pdf":
+        return await extract_pdf_tables(file_path)
+
+    if suffix == ".docx" or (content_type in WORD_MIME_TYPES):
+        return await extract_docx_tables(file_path)
+
+    if suffix == ".doc":
+        # textract will return plain text; reconstructing tables is non-trivial.
+        if textract is None:
+            return []
+        try:
+            raw = textract.process(str(file_path))
+            if isinstance(raw, bytes):
+                text = raw.decode("utf-8", errors="replace")
+            else:
+                text = str(raw)
+            # As a fallback, return a single table with each line as a single-cell row
+            rows = [[line] for line in text.splitlines() if line.strip()]
+            return [rows] if rows else []
+        except Exception:
+            return []
+
+    return []
