@@ -4,6 +4,18 @@ Document processing service for extracting text from various file formats
 from pathlib import Path
 from typing import Optional
 
+# Optional dependencies: import at module level so missing packages produce
+# a clear, single point of failure and can be checked by helper functions.
+try:
+    from PyPDF2 import PdfReader
+except Exception:
+    PdfReader = None
+
+try:
+    from docx import Document as DocxDocument
+except Exception:
+    DocxDocument = None
+
 WORD_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/msword",
@@ -53,13 +65,44 @@ async def process_document(file_path: Path, content_type: Optional[str]) -> str:
         return f"[Error processing file: {str(e)}]"
 
 async def extract_pdf_text(file_path: Path) -> str:
-    """Extract text from PDF (placeholder - requires PyPDF2 or similar)"""
-    # TODO: Implement PDF extraction
-    # For now, return placeholder
-    return f"[PDF content from {file_path.name} - PDF extraction not yet implemented]"
+    """Extract text from PDF using PyPDF2.
+
+    Falls back to a helpful message if PyPDF2 is not installed.
+    """
+    if PdfReader is None:
+        return f"[PDF extraction requires PyPDF2; please install backend/requirements.txt dependencies]"
+
+    try:
+        reader = PdfReader(str(file_path))
+        texts: list[str] = []
+        for page in reader.pages:
+            # PyPDF2's page.extract_text() may be None for pages without extractable text
+            text = page.extract_text()
+            if text:
+                texts.append(text)
+        joined = "\n".join(texts).strip()
+        return joined if joined else f"[No text found in PDF {file_path.name}]"
+    except Exception as e:
+        return f"[Error extracting PDF: {e}]"
 
 async def extract_docx_text(file_path: Path) -> str:
-    """Extract text from Word document (placeholder - requires python-docx)"""
-    # TODO: Implement DOCX extraction
-    # For now, return placeholder
-    return f"[Word document content from {file_path.name} - DOCX extraction not yet implemented]"
+    """Extract text from Word documents (.docx) using python-docx.
+
+    - For `.docx` files this will return the concatenated paragraph text.
+    - For legacy `.doc` files, returns a short message (conversion required).
+    - If `python-docx` is not installed, returns a helpful message.
+    """
+    suffix = file_path.suffix.lower()
+    if suffix == ".doc":
+        return f"[Legacy .doc files are not supported; please convert {file_path.name} to .docx]"
+
+    if DocxDocument is None:
+        return f"[DOCX extraction requires python-docx; please install backend/requirements.txt dependencies]"
+
+    try:
+        doc = DocxDocument(str(file_path))
+        paragraphs = [p.text for p in doc.paragraphs if p.text]
+        joined = "\n".join(paragraphs).strip()
+        return joined if joined else f"[No text found in Word document {file_path.name}]"
+    except Exception as e:
+        return f"[Error extracting Word document: {e}]"
