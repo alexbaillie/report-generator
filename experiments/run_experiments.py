@@ -10,6 +10,100 @@ from datetime import datetime, timezone
 from prompts import PROMPTS
 from config import TEMPERATURES, CONTEXT_LENGTHS, TEST_INPUT
 
+# Template content for report generation
+TEMPLATE_CONTENT = """
+Generate a professional neuropsychological report following this exact structure:
+
+Psych Report Template
+
+PATIENT
+Name:
+Chart number:
+Date of birth:
+Date of assessment:
+Age at assessment:	
+Date of conference:	
+Legal guardian:	
+		
+TEAM
+Developmental Pediatrician:	
+Psychologist:	
+Assessing Clinician:	
+Speech Language Pathologist:	
+Social worker:	
+Case manager:   
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of findings:
+
+RECOMMENDATIONS FOR SERVICE
+
+STRATEGIES
+Allowances:
+Accommodations:
+Instructional Strategies:
+
+SUPPORTING INFORMATION
+Reason for referral:
+Sources of information:
+Background information:
+- Presenting concerns (as provided by...)
+- Family History
+- Developmental and Medical History
+- Educational History
+- Previous Schools and Programming
+- Previous Assessments & Interventions
+Behavioural Observations:
+Tests administered:
+Parent/teacher report measures administered:
+Information on the interpretation of test scores:
+
+APPENDICES 
+
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate.
+"""
+
+# Simulated additional inputs
+ADDITIONAL_INPUTS = {
+    "session_observations": """
+During the assessment session, the child appeared cooperative and engaged. She demonstrated good rapport with the examiner and appeared motivated to perform well on tasks. Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+""",
+    "previous_reports": """
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attention and executive functioning. At that time, the child was diagnosed with ADHD and started on stimulant medication. Parent reports mixed response to medication, with some improvement in focus but continued challenges with organization and task completion.
+""",
+    "other_info": """
+The child attends a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per night. The child enjoys art and music activities and participates in soccer after school.
+"""
+}
+
+def build_experiment_prompt(system_prompt: str, context_length: int) -> str:
+    """Build a prompt similar to the actual report generation process"""
+    truncated_input = TEST_INPUT[:context_length]
+    
+    prompt_parts = [
+        "You are a professional psychologist writing a psychological report.",
+        f"\nReport Type: evaluation",
+        f"\nTemplate Instructions:\n{TEMPLATE_CONTENT}",
+    ]
+    
+    # Add document content
+    prompt_parts.append("\n\nSource Documents:")
+    prompt_parts.append(f"\n--- Test Data ---")
+    prompt_parts.append(truncated_input)
+    
+    # Add additional inputs
+    if ADDITIONAL_INPUTS:
+        prompt_parts.append("\n\nAdditional Information:")
+        for key, value in ADDITIONAL_INPUTS.items():
+            prompt_parts.append(f"\n{key}: {value}")
+    
+    prompt_parts.append("\n\nPlease generate a professional psychological report based on the above information. The report should be well-structured, clear, and follow professional standards.")
+    
+    return "\n".join(prompt_parts)
+
 def build_model(model_name: str, modelfile_path: Path):
     subprocess.run(
         ["ollama", "create", model_name, "-f", str(modelfile_path)],
@@ -59,17 +153,7 @@ def main():
             build_model(model_name, modelfile)
 
             for ctx_len in CONTEXT_LENGTHS:
-                truncated_input = TEST_INPUT[:ctx_len]
-
-                full_prompt = f"""
-{system_prompt}
-
-INPUT:
-{truncated_input}
-
-TASK:
-Write a cognitive and attention-related summary.
-"""
+                full_prompt = build_experiment_prompt(system_prompt, ctx_len)
 
                 output = run_ollama(model_name, full_prompt)
 

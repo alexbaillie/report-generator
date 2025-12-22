@@ -35,16 +35,16 @@ export default function EditorPage() {
 
   const exampleParagraphs = [
     {
-      title: 'Example Paragraph 1',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt...',
+      title: 'Confidentiality Statement',
+      content: `This is a CONFIDENTIAL report intended solely for the use of [insert full name], her legal guardian(s), and other specifically named individuals. Requests for copies of this report should be directed to [insert first name]'s legal guardian(s).`,
     },
     {
-      title: 'Example Paragraph 2',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed...',
+      title: 'Purpose of Report / Program Context',
+      content: `This psychological assessment was completed as part of a multidisciplinary evaluation through the [program name] at the request of [referring professional]. The purpose of this assessment was to evaluate [insert first name]'s current cognitive, academic, adaptive, and social-emotional functioning and to provide recommendations to support her development across home, school, and community settings.`,
     },
     {
-      title: 'Example Paragraph 3',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit,...',
+      title: 'Diagnostic Criteria Met (Learning Disorders – General)',
+      content: `Based on the results of the current assessment, review of background information, and reports from caregivers and teachers, [insert first name] meets diagnostic criteria for Specific Learning Disorder with impairments in [reading / written expression / mathematics]. Given the breadth and severity of difficulties observed across multiple domains, the severity of these learning disorders is considered severe.`,
     },
   ];
 
