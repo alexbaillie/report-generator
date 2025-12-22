@@ -11,51 +11,61 @@ def seed_templates():
     templates = [
         {
             "name": "Standard Intake Assessment",
-            "description": "Comprehensive initial assessment template",
-            "template_type": "intake",
+            "description": "Comprehensive neuropsychological assessment template",
+            "template_type": "evaluation",
             "is_default": True,
-            "content": """Generate a professional psychological intake assessment report with the following sections:
+            "content": """Generate a professional neuropsychological report following this exact structure:
 
-1. IDENTIFYING INFORMATION
-   - Patient demographics
-   - Referral source
-   - Date of assessment
+Psych Report Template
 
-2. PRESENTING PROBLEM
-   - Chief complaint
-   - History of present illness
-   - Onset and duration
+PATIENT
+Name:
+Chart number:
+Date of birth:
+Date of assessment:
+Age at assessment:	
+Date of conference:	
+Legal guardian:	
+		
+TEAM
+Developmental Pediatrician:	
+Psychologist:	
+Assessing Clinician:	
+Speech Language Pathologist:	
+Social worker:	
+Case manager:   
 
-3. MENTAL STATUS EXAMINATION
-   - Appearance and behavior
-   - Speech and thought process
-   - Mood and affect
-   - Cognitive functioning
+CONTENTS
 
-4. CLINICAL HISTORY
-   - Psychiatric history
-   - Medical history
-   - Substance use history
-   - Family history
+SUMMARIES
+Diagnostic summary:
+Summary of findings:
 
-5. PSYCHOSOCIAL HISTORY
-   - Developmental history
-   - Educational/occupational history
-   - Social relationships
-   - Current living situation
+RECOMMENDATIONS FOR SERVICE
 
-6. DIAGNOSTIC IMPRESSIONS
-   - Primary diagnosis
-   - Differential diagnoses
-   - Severity assessment
+STRATEGIES
+Allowances:
+Accommodations:
+Instructional Strategies:
 
-7. TREATMENT RECOMMENDATIONS
-   - Recommended interventions
-   - Frequency of sessions
-   - Goals of treatment
-   - Prognosis
+SUPPORTING INFORMATION
+Reason for referral:
+Sources of information:
+Background information:
+- Presenting concerns (as provided by...)
+- Family History
+- Developmental and Medical History
+- Educational History
+- Previous Schools and Programming
+- Previous Assessments & Interventions
+Behavioural Observations:
+Tests administered:
+Parent/teacher report measures administered:
+Information on the interpretation of test scores:
 
-Please write in a professional, clinical tone using third person. Base the report on the provided documents and additional information."""
+APPENDICES 
+
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate."""
         },
         {
             "name": "Progress Note",
@@ -148,12 +158,17 @@ Write in a clear, professional manner summarizing the entire treatment episode."
     for template_data in templates:
         # Check if template already exists
         existing = db.query(Template).filter(Template.name == template_data["name"]).first()
-        if not existing:
+        if existing:
+            # Update existing template
+            for key, value in template_data.items():
+                if key != "name":  # Don't update name
+                    setattr(existing, key, value)
+            db.commit()
+            print(f"Updated template: {template_data['name']}")
+        else:
             template = Template(**template_data)
             db.add(template)
             print(f"Created template: {template_data['name']}")
-        else:
-            print(f"Template already exists: {template_data['name']}")
     
     db.commit()
     db.close()

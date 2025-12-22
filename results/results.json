@@ -1,0 +1,218 @@
+[
+  {
+    "model": "tinyllama_baseline_t0_2",
+    "prompt_variant": "baseline",
+    "temperature": 0.2,
+    "context_length": 512,
+    "output": "Cognitively, the client is exhibiting symptoms of attention deficit hyperactivity disorder (ADHD) with impulsivity and academic performance concerns. The parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.",
+    "timestamp": "2025-12-22T00:52:15.675909+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_2",
+    "prompt_variant": "baseline",
+    "temperature": 0.2,
+    "context_length": 1024,
+    "output": "Cognitively, the client is an average intellectual functioning individual with overall scores that are within normal range for their age. They demonstrate strong verbal comprehension and processing speed, but weak working memory and processing speed. The child's social skills are age-appropriate, and they engage in age-appropriate communication skills.\n\nAttention-related concerns include difficulties sustaining attention during classroom tasks and frequent distractibility at home. Parent reports indicate difficulty following multi-step instructions and inconsistent task completion. Teacher observations indicate inconsistencies with following multi-step instructions, as well as chaos with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning, while working memory and processing speed scores are comparatively weaker. The child's overall cognitive functioning is within normal range for their age.\n\nEmotional and behavioral concerns reported include inconsistent task completion and chaos with following multi-step instructions. The child demonstrates age-appropriate social engagement and communication skills, but may struggle with emotional regulation and impulsivity.",
+    "timestamp": "2025-12-22T00:52:26.769766+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_2",
+    "prompt_variant": "baseline",
+    "temperature": 0.2,
+    "context_length": 2048,
+    "output": "Cognitively, the client is a 7-year-old child with average intellectual functioning. They demonstrate overall average strengths in verbal comprehension and processing speed, but weaknesses in working memory and processing speed. The child's social skills are age-appropriate, with communication skills that are not significantly impaired.\n\nAttention-related concerns include attention to task completion, inconsistent task completion, and difficulty sustaining attention during classroom tasks. Parent reports of difficulty following multi-step instructions at home, while teacher observations indicate inconsistencies in task completion and challenges with following multi-step instructions. The child's behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.\n\nOverall, the client's cognitive and atteintion-related abilities are generally age-appropriate, but there may be some impairments in working memory and processing speed due to attention-related difficulties.",
+    "timestamp": "2025-12-22T00:52:37.934350+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_5",
+    "prompt_variant": "baseline",
+    "temperature": 0.5,
+    "context_length": 512,
+    "output": "Cognitively, the client has been found to be impulsive, with difficulty sustaining attention during classroom tasks and frequent distractibility at home. The parent reports inconsistent task completion, while teacher observations indicate challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers revealed elevated scores in the areas of attention and executive functioning.",
+    "timestamp": "2025-12-22T00:52:42.955884+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_5",
+    "prompt_variant": "baseline",
+    "temperature": 0.5,
+    "context_length": 1024,
+    "output": "Cognitively, the client has average intellectual functioning, with scores indicating overall above-average performance in verbal comprehension, but below-average scores in working memory and processing speed. The child's social engagement and communication skills are age-appropriate.\n\nAssessment of attention-related difficulties includes parent and teacher observations indicating inconsistent task completion, challenges with following multi-step instructions, and elevated scores on behavioral rating scales in the areas of attention and executive functioning. The child's overall cognitive abilities are not significantly affected by these concerns.\n\nThe client demonstrates age-appropriate social engagement and communication skills, indicating that the concerns related to attenion do not significantly impact their overall well-being or development.",
+    "timestamp": "2025-12-22T00:52:52.377688+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_5",
+    "prompt_variant": "baseline",
+    "temperature": 0.5,
+    "context_length": 2048,
+    "output": "Cognitively, the client is an average-performing individual with above-average intellectual functioning. The child has demonstrated age-appropriate social engagement and communication skills. However, due to inconsistent task completion and distractibility at home, they are experiencing difficulties sustaining attention during classroom tasks and frequently exhibiting impulsivity in academic performance. Parent reports difficulty following multi-step instructions, while teacher observations indicate a consistent pattern of distractions and challenges with following instructions. Additionally, the child's cognitive testing revealed overall average intellectual functioning, but weaknesses were noted in working memory and processing speed. Emotional concerns are not reported beyond attention-related difficulties.",
+    "timestamp": "2025-12-22T00:52:59.674948+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_8",
+    "prompt_variant": "baseline",
+    "temperature": 0.8,
+    "context_length": 512,
+    "output": "Cognitively, the client's attention is compromised due to inconsistently completed tasks during classroom settings. Executive functioning is indicated by elevated scores in areas of inattention and impulsivity. Cognitive testing was conducted through cognaitional and attentional assessments.",
+    "timestamp": "2025-12-22T00:53:02.854890+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_8",
+    "prompt_variant": "baseline",
+    "temperature": 0.8,
+    "context_length": 1024,
+    "output": "Cognitively, the client shows above-average intellectual functioning, with a strong overall verbal comprehension score. Working memory and processing speed scores are comparatively weak. No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:53:07.447069+00:00"
+  },
+  {
+    "model": "tinyllama_baseline_t0_8",
+    "prompt_variant": "baseline",
+    "temperature": 0.8,
+    "context_length": 2048,
+    "output": "Summary:\nThe client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. The parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in areas of inattention and executive functioning, but lower scores in verbal comprehension, processing speed, and working memory. The child's overall intellectual functioning is described as average, while strengths were noted in verbal comprehension. However, the child displays age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:53:13.311914+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_2",
+    "prompt_variant": "structured",
+    "temperature": 0.2,
+    "context_length": 512,
+    "output": "Cognitively, the client is exhibiting difficulties with sustaining attention during classroom tasks and frequently distractibility at home. The parent reports inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in areas of inattention and executive functioning.\n\nClinically, the client's concerns are related to attention and impulsivity, which may be contributing to academic performance issues. The assessment summaries provide a clear understanding of the client's current state and potential treatment options.",
+    "timestamp": "2025-12-22T00:53:21.147495+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_2",
+    "prompt_variant": "structured",
+    "temperature": 0.2,
+    "context_length": 1024,
+    "output": "Clinical Psychology Assistant\n\nThe client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning, but lower scores in processing speed and verbal comprehension. Cognitive testing revealed overall average intellectual functioning, strengths in verbal comprehension, and weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.\n\nAssessment Summary:\nThe client's attention, impulsivity, and academic performance concerns are attributed to inconsistent task completion and challenges with following multi-step instructions. The child's cognitive testing results indicate average intellectual functioning, strengths in verbal comprehension, and weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:53:31.515640+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_2",
+    "prompt_variant": "structured",
+    "temperature": 0.2,
+    "context_length": 2048,
+    "output": "Clinical Psychology Assistant\n\nThe client referred for concerns related to attention, impulsivity, and academic performance is a 7-year-old child who presents with inconsistent task completion and frequent distractibility at home. The child's behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning. Cognitive testing revealed overall average intellectual functioning, strengths noted in verbal comprehension, but weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.\n\nThe client's attention-related difficulties are attributed to inconsistent task completion and frequent distractibility at home. These difficulties are further exacerbated by the child's emotional and behavioral concerns, which may be contributing to their academic performance. The child's overall cognitive functioning is well-appreciated, with strengths noted in verbal comprehension, but weaknesses in working memory and processing speed. The client's social engagement and communication skills are age-appropriate, indicating that they have the necessary tools to navigate their environment effectively.\n\nOverall, while the client presents with attention-related difficulties, there is no significant emotional or behavioral concern beyond these issues. The child's cognitive functioning is well-appreciated and supports their academic performance.",
+    "timestamp": "2025-12-22T00:53:41.875406+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_5",
+    "prompt_variant": "structured",
+    "temperature": 0.5,
+    "context_length": 512,
+    "output": "Cognitive and Attentional Summary for The Client (Aged 7)\n\nThe client is referred to this clinical psychology assistant for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks, leading to frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning. Overall, this assessment summary highlights a high level of cognitive complexity and attention deficits, which may contribute to academic performance issues.",
+    "timestamp": "2025-12-22T00:53:47.347037+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_5",
+    "prompt_variant": "structured",
+    "temperature": 0.5,
+    "context_length": 1024,
+    "output": "Clinical Psychology Assistant\n\nClient: A 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning. Cognitive testing revealed overall average intellectual functioning, strengths in verbal comprehension, but weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.\n\nAssessment Summary:\n1. Attention-related difficulties: The client presents with inconsistent task completion and frequent distractibility at home.\n2. Executive functioning: The client has weaknesses in working memory and processing speed, but strong strengths in verbal comprehension.\n3. Intellectual functioning: The child demonstrates age-appropriate social engagement and communication skills.\n4. Attention-related difficulties: Client presents with inconsistent task completion and frequent distractibility at home.\n5. Executive functioning: The client has weaknesses in working memory and processing speed, but strong strengths in verbal comprehension.\n6. Intellectual functioning: The child demonstrates age-appropriate social engagement and communication skills.\n7. Cognitive testing: Client shows average intellectual functioning, with strengths in verbal comprehension and weaknesses in working memory and processing speed.\n8. Behavioral rating scales: Parent reports inconsistent task completion and frequent distractibility at home. Teacher observations indicate challenges following multi-step instructions.\n9. Assessment of social engagement and communication skills: The client demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:54:03.608972+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_5",
+    "prompt_variant": "structured",
+    "temperature": 0.5,
+    "context_length": 2048,
+    "output": "Title: Attention, Impulsivity, and Academic Performance in a 7-Year-Old Child Referred for Concerns\n\nIntroduction:\nThe client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. The parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. The teacher has observed inconsistent task completion and chaos with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, particularly in verbal comprehension. Cognitive testing revealed overall average intellectual functioning, with strengths noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker. Emotional and behavioral concerns were reported beyond attention-related difficulties. The child demonstrates age-appropriate social engagement and communication skills.\n\nAssessment:\n1. Attention:\na. Cognitive testing revealed overall average intellectual functioning, with strengths noted in verbal comprehension.\nb. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, particularly in verbal comprehension.\nc. Cognitive tests revealed overall average intelligence, with strengths noted in verbal comprehension.\nd. Social engagement and communication skills are age-appropriate.\n\n2. Impulsivity:\na. Emotional and behavioral concerns were reported beyond attention-related difficulties.\nb. The child demonstrates age-appropriate social engagement and communication skills.\n\n3. Academic performance:\na. Cognitive testing revealed overall average intelligence, with strengths noted in verbal comprehension.\nb. Social engagement and communication skills are age-appropriate.\n\nConclusion:\nBased on the assessment results, it can be inferred that the client has attention-related difficulties, including inattention and executive functioning, as well as impulsivity and academic performance concerns. The child demonstrates age-appropriate social engagement and communication skills, indicating that these areas are not impacted by the client's issues. However, further diagnostic testing may be necessary to fully understand the extent of the client's difficulties.",
+    "timestamp": "2025-12-22T00:54:21.706243+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_8",
+    "prompt_variant": "structured",
+    "temperature": 0.8,
+    "context_length": 512,
+    "output": "Clinical Assessment Summary\n\nThe client presented with concerns related to attention, impulsivity, and academic performance. The parent reports difficulty sustaining attention during classroom tasks, while the teacher notes inconsistent task completion and challenges in following multi-step instructions. The Behavior Rating Scales completed by both parents and teachers indicate elevated scores in areas of inattention and executive functioning. \n\nThe assessment summary provides a clear overview of the client's concerns, their clinical presentation, and any relevant observations or findings from the evaluation. The summary also includes an overview of the patient's cognitive testing, including oculomotor and visual-spatial tasks. Overall, the clinical assessment provides a comprehensive understanding of the client's needs and treatment plan, which can be tailored based on the patient's specific challenges.",
+    "timestamp": "2025-12-22T00:54:28.882165+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_8",
+    "prompt_variant": "structured",
+    "temperature": 0.8,
+    "context_length": 1024,
+    "output": "Cognitively, the client is assessed as having average intellectual functioning in terms of verbal comprehension, but with weaker processing speed and working memory than average. This results in an overall average score.\n\nAttention-related issues are present, with the child exhibiting difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations and behavioral rating scales show elevated scores in areas of inattenton and executive functioning. The client's emotional and behavioral concerns are age-appropriate social skills and communication skills.\n\nOverall, the assessment suggests that the client exhibits average cognitive abilities and attention deficits with some areas of weakness. A strong working memory is noted alongside average processing speed, but these issues do not necessarily hinder overall social or communication skills.",
+    "timestamp": "2025-12-22T00:54:36.807896+00:00"
+  },
+  {
+    "model": "tinyllama_structured_t0_8",
+    "prompt_variant": "structured",
+    "temperature": 0.8,
+    "context_length": 2048,
+    "output": "Clinical Psychology Assistant\n\nAssessment Summary\nThe client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, while working memory and processing speed scores were comparatively weak. The child demonstrated age-appropriate social engagement and communication skills.\n\nThis clinical psychology assessment summary provides a clear and concise summary of the client's specific concerns related to attention, impulsivity, and academic performance. It highlights areas of strength in cognitive functioning and specific weaknesses in task completion and processing speed. The overall report provides a comprehensive overview of the client's presentation, and it can be used as a foundation for further diagnostic and treatment evaluation.",
+    "timestamp": "2025-12-22T00:54:44.860008+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_2",
+    "prompt_variant": "conservative",
+    "temperature": 0.2,
+    "context_length": 512,
+    "output": "Cognitive and Attention-Related Summary:\nThe client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.",
+    "timestamp": "2025-12-22T00:54:52.386560+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_2",
+    "prompt_variant": "conservative",
+    "temperature": 0.2,
+    "context_length": 1024,
+    "output": "The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. The parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning, but overall intellectual functioning is generally average. Cognitive testing revealed overall average intellectual functioning, strengths in verbally comprehension, and weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:54:59.065928+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_2",
+    "prompt_variant": "conservative",
+    "temperature": 0.2,
+    "context_length": 2048,
+    "output": "The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, while working memory and processing speed scores are comparatively weak. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:55:03.279846+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_5",
+    "prompt_variant": "conservative",
+    "temperature": 0.5,
+    "context_length": 512,
+    "output": "Clinical Psychology Assistant's Summary (CPA): The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning.",
+    "timestamp": "2025-12-22T00:55:07.623448+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_5",
+    "prompt_variant": "conservative",
+    "temperature": 0.5,
+    "context_length": 1024,
+    "output": "The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home, while teacher observations indicate inconsistent task completion and chaos with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, but notably weaker scores in verbal comprehension and processing speed. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:55:13.393313+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_5",
+    "prompt_variant": "conservative",
+    "temperature": 0.5,
+    "context_length": 2048,
+    "output": "The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. The parent reports difficulties sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, but weaknesses in verbal comprehension and working memory. Cognitive testing revealed overall average intellectual functioning, while strengths were noted in verbally comprehending tasks. The child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:55:18.652345+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_8",
+    "prompt_variant": "conservative",
+    "temperature": 0.8,
+    "context_length": 512,
+    "output": "SUMMARY: The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, suggesting a possible diagnosis of Attention Deficit Hyperactivity Disorder (ADHD).",
+    "timestamp": "2025-12-22T00:55:23.090744+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_8",
+    "prompt_variant": "conservative",
+    "temperature": 0.8,
+    "context_length": 1024,
+    "output": "Client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion, as well as challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning. Cognitive testing revealed overall average intellectual functioning, but strengths were noted in verbal comprehension while working memory and processing speed scores were comparatively weak. While no significant emotional or behavioral concerns were reported beyond attention-related difficulties, the child demonstrates age-appropriate social engagement and communication skills.",
+    "timestamp": "2025-12-22T00:55:30.722358+00:00"
+  },
+  {
+    "model": "tinyllama_conservative_t0_8",
+    "prompt_variant": "conservative",
+    "temperature": 0.8,
+    "context_length": 2048,
+    "output": "Client is referred to the clinical psychology assistant for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion, with challenges in following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning. Cognitive testing revealed overall average intellectual functioning, strengths noted in verbal comprehension, and weaknesses in working memory and processing speed. This child demonstrates age-appropriate social engagement and communication skills, indicating no significant emotional or behavioral concerns beyond attention-related difficulties. The clinical psychology assistant will conduct a thorough assessment to determine the specific needs of this client, as well as the best treatment plan to address their concerns.",
+    "timestamp": "2025-12-22T00:55:37.361857+00:00"
+  }
+]

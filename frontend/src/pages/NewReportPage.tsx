@@ -1,12 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Upload, Plus } from 'lucide-react';
 import { api } from '../services/api';
 
+interface TestTableEntry {
+  type: string;
+  description: string;
+  files: File[];
+}
+
+interface Template {
+  id: number;
+  name: string;
+  description: string;
+  template_type: string;
+  content: string;
+  is_default: boolean;
+}
+
 interface FormData {
   title: string;
   template: string;
-  test_tables: File[];
+  testTableEntries: TestTableEntry[];
   session_observations: string;
   previous_reports: string;
   other_info: string;
@@ -20,10 +35,11 @@ export default function NewReportPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [formData, setFormData] = useState<FormData>({
     title: 'Neuropsychological Assessment',
     template: '',
-    test_tables: [],
+    testTableEntries: [{ type: '', description: '', files: [] }],
     session_observations: '',
     previous_reports: '',
     other_info: '',
@@ -33,19 +49,59 @@ export default function NewReportPage() {
     document_ids: [],
   });
 
-  const handleFileUpload = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const data = await api.getTemplates();
+      setTemplates(data);
+      // Set default template if available
+      const defaultTemplate = data.find((t: Template) => t.is_default);
+      if (defaultTemplate) {
+        setFormData(prev => ({ ...prev, template_id: defaultTemplate.id.toString() }));
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  };
+
+  const handleFileUpload = (index: number) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
       setFormData(prev => ({
         ...prev,
-        [field]: field === 'test_tables' ? [...prev.test_tables, ...newFiles] : newFiles[0]
+        testTableEntries: prev.testTableEntries.map((entry, i) =>
+          i === index ? { ...entry, files: [...entry.files, ...newFiles] } : entry
+        )
       }));
     }
   };
 
+  const handleTextFileUpload = (field: keyof FormData) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // For text fields, read the first file
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setFormData(prev => ({
+          ...prev,
+          [field]: content
+        }));
+      };
+      reader.readAsText(file);
+    }
+  };
+
   const addTestTable = () => {
-    document.getElementById('test-table-upload')?.click();
+    setFormData(prev => ({
+      ...prev,
+      testTableEntries: [...prev.testTableEntries, { type: '', description: '', files: [] }]
+    }));
   };
 
   const handleSubmit = async () => {
@@ -83,89 +139,112 @@ export default function NewReportPage() {
               <label className="text-white text-lg mb-3 block">Choose template</label>
               <select
                 className="input w-full max-w-md"
-                value={formData.template}
-                onChange={(e) => setFormData({ ...formData, template: e.target.value })}
+                value={formData.template_id}
+                onChange={(e) => setFormData({ ...formData, template_id: e.target.value })}
               >
                 <option value="">Select template</option>
-                <option value="neuropsych">Neuropsychological Report</option>
-                <option value="intake">Intake Assessment</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id.toString()}>
+                    {template.name} {template.is_default ? '(Default)' : ''}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
               <label className="text-white text-lg mb-3 block">Upload test table or type/paste</label>
-              <div className="flex items-start gap-3 mb-3">
-                <select className="input flex-1 max-w-md">
-                  <option value="">Select test table</option>
-                  <option>ADOS-2</option>
-                  <option>ABAS-III</option>
-                  <option>Aseba</option>
-                  <option>ASRS 1.1</option>
-                  <option>Beck Youth Inventory</option>
-                  <option>Bayley-4</option>
-                  <option>Beck Youth Inventory-2</option>
-                  <option>Beery VMI-6</option>
-                  <option>Bracken-III</option>
-                  <option>Bracken-IV</option>
-                  <option>Brief</option>
-                  <option>CDI-2</option>
-                  <option>Children's Colour Trails Test</option>
-                  <option>C-TOPP-2</option>
-                  <option>CVLT-C</option>
-                  <option>DABS</option>
-                  <option>DAS-II</option>
-                  <option>DKEFS</option>
-                  <option>EVT-2</option>
-                  <option>GORT</option>
-                  <option>Leiter</option>
-                  <option>MASC</option>
-                  <option>Movement ABC-2</option>
-                  <option>Mullen (version 1)</option>
-                  <option>NEPSY-II</option>
-                  <option>PAI</option>
-                  <option>PPVT-4</option>
-                  <option>REEL-4</option>
-                  <option>Rey Complex Figure Test-1</option>
-                  <option>Scared</option>
-                  <option>SCQ</option>
-                  <option>Sensory Profiles-2</option>
-                  <option>SIB-r</option>
-                  <option>SLDT-E:NU</option>
-                  <option>TOPS</option>
-                  <option>TOWL-4</option>
-                  <option>TVCF-1</option>
-                  <option>Vineland-3</option>
-                  <option>WAIS-IV</option>
-                  <option>WASI-II</option>
-                  <option>WIAT-II</option>
-                  <option>WIAT-IV</option>
-                  <option>WISC-V</option>
-                  <option>Woodcock-Johnson-IV</option>
-                  <option>WPPSI-IV</option>
-                  <option>WRAML-2</option>
-                  <option>WRAML-3</option>
-                  <option>WSR-II</option>
-                </select>
-                <button
-                  type="button"
-                  className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
-                  onClick={() => document.getElementById('test-upload')?.click()}
-                >
-                  <Upload size={24} className="text-gray-300" />
-                </button>
-                <input
-                  id="test-upload"
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileUpload('test_tables')}
-                  multiple
-                />
-              </div>
-              <textarea
-                className="textarea w-full"
-                rows={4}
-                placeholder=""
-              />
+              {formData.testTableEntries.map((entry, index) => (
+                <div key={index} className="mb-6 p-4 border border-dark-600 rounded">
+                  <div className="flex items-start gap-3 mb-3">
+                    <select
+                      className="input flex-1 max-w-md"
+                      value={entry.type}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        testTableEntries: prev.testTableEntries.map((ent, i) =>
+                          i === index ? { ...ent, type: e.target.value } : ent
+                        )
+                      }))}
+                    >
+                      <option value="">Select test table</option>
+                      <option>ADOS-2</option>
+                      <option>ABAS-III</option>
+                      <option>Aseba</option>
+                      <option>ASRS 1.1</option>
+                      <option>Beck Youth Inventory</option>
+                      <option>Bayley-4</option>
+                      <option>Beck Youth Inventory-2</option>
+                      <option>Beery VMI-6</option>
+                      <option>Bracken-III</option>
+                      <option>Bracken-IV</option>
+                      <option>Brief</option>
+                      <option>CDI-2</option>
+                      <option>Children's Colour Trails Test</option>
+                      <option>C-TOPP-2</option>
+                      <option>CVLT-C</option>
+                      <option>DABS</option>
+                      <option>DAS-II</option>
+                      <option>DKEFS</option>
+                      <option>EVT-2</option>
+                      <option>GORT</option>
+                      <option>Leiter</option>
+                      <option>MASC</option>
+                      <option>Movement ABC-2</option>
+                      <option>Mullen (version 1)</option>
+                      <option>NEPSY-II</option>
+                      <option>PAI</option>
+                      <option>PPVT-4</option>
+                      <option>REEL-4</option>
+                      <option>Rey Complex Figure Test-1</option>
+                      <option>Scared</option>
+                      <option>SCQ</option>
+                      <option>Sensory Profiles-2</option>
+                      <option>SIB-r</option>
+                      <option>SLDT-E:NU</option>
+                      <option>TOPS</option>
+                      <option>TOWL-4</option>
+                      <option>TVCF-1</option>
+                      <option>Vineland-3</option>
+                      <option>WAIS-IV</option>
+                      <option>WASI-II</option>
+                      <option>WIAT-II</option>
+                      <option>WIAT-IV</option>
+                      <option>WISC-V</option>
+                      <option>Woodcock-Johnson-IV</option>
+                      <option>WPPSI-IV</option>
+                      <option>WRAML-2</option>
+                      <option>WRAML-3</option>
+                      <option>WSR-II</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                      onClick={() => document.getElementById(`test-upload-${index}`)?.click()}
+                    >
+                      <Upload size={24} className="text-gray-300" />
+                    </button>
+                    <input
+                      id={`test-upload-${index}`}
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload(index)}
+                      multiple
+                    />
+                  </div>
+                  <textarea
+                    className="textarea w-full"
+                    rows={4}
+                    placeholder=""
+                    value={entry.description}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      testTableEntries: prev.testTableEntries.map((ent, i) =>
+                        i === index ? { ...ent, description: e.target.value } : ent
+                      )
+                    }))}
+                  />
+                </div>
+              ))}
             </div>
 
             <button
@@ -198,6 +277,7 @@ export default function NewReportPage() {
                 <button
                   type="button"
                   className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                  onClick={() => document.getElementById('session-observations-upload')?.click()}
                 >
                   <Upload size={24} className="text-gray-300" />
                 </button>
@@ -209,6 +289,12 @@ export default function NewReportPage() {
                 onChange={(e) => setFormData({ ...formData, session_observations: e.target.value })}
                 placeholder=""
               />
+              <input
+                id="session-observations-upload"
+                type="file"
+                className="hidden"
+                onChange={handleTextFileUpload('session_observations')}
+              />
             </div>
 
             <div>
@@ -217,6 +303,7 @@ export default function NewReportPage() {
                 <button
                   type="button"
                   className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                  onClick={() => document.getElementById('previous-reports-upload')?.click()}
                 >
                   <Upload size={24} className="text-gray-300" />
                 </button>
@@ -227,6 +314,12 @@ export default function NewReportPage() {
                 value={formData.previous_reports}
                 onChange={(e) => setFormData({ ...formData, previous_reports: e.target.value })}
                 placeholder=""
+              />
+              <input
+                id="previous-reports-upload"
+                type="file"
+                className="hidden"
+                onChange={handleTextFileUpload('previous_reports')}
               />
             </div>
 
@@ -243,6 +336,7 @@ export default function NewReportPage() {
                 <button
                   type="button"
                   className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                  onClick={() => document.getElementById('other-info-upload')?.click()}
                 >
                   <Upload size={24} className="text-gray-300" />
                 </button>
@@ -253,6 +347,12 @@ export default function NewReportPage() {
                 value={formData.other_info}
                 onChange={(e) => setFormData({ ...formData, other_info: e.target.value })}
                 placeholder=""
+              />
+              <input
+                id="other-info-upload"
+                type="file"
+                className="hidden"
+                onChange={handleTextFileUpload('other_info')}
               />
             </div>
 

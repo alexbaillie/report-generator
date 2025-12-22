@@ -1,0 +1,13 @@
+Psychological report summary based on the input:
+
+INTRODUCTION:
+The child referred for evaluation has been experiencing difficulties in maintaining attention and completing tasks. The teacher's reports indicate that they struggle with sustaining attention and completing tasks, resulting in low WISC-V scores (92), low WMIs (78), poor PSI scores (85), and high FSIQ scores (88). These findings suggest a cognitive and attentional-related issue.
+
+INTRODUCTION TO COGNITIVE ISSUES:
+Cognitive issues are common in children with attention deficit hyperactivity disorder (ADHD) and other attention-deficit/hyperactivity disorder (ADHD) subtypes, including inattentive, hyperactive-impulsive, and combined ADHD. These conditions can result in difficulties sustaining attention and completing tasks due to impaired executive functioning, which includes planning, organizing, and executing tasks. The child's WISC-V score is lower than the average for children with ADHD, indicating that they may be struggling with executive functioning. This suggests a cognitive issue.
+
+INTRODUCTION TO ATTENTION-RELATED ISSUES:
+Attention-related issues are common in children with ADHD and other attention-deficit/hyperactivity disorder (ADHD) subtypes, including inattentive, hyperactive-impulsive, and combined ADHD. These conditions can result in difficulties sustaining attention and completing tasks due to impaired attentional control, which includes the ability to focus on a task or activity while avoiding distractions. The child's WISC-V score is lower than the average for children with ADHD, indicating that they may be struggling with attentional control. This suggests an attention-related issue.
+
+TAKEAWAYS:
+Based on the input, the psychological report summary suggests that the child has been experiencing difficulties in maintaining attention and completing tasks due to cognitive and attention-related issues. The WISC-V score is lower than the average for children with ADHD, indicating that they may be struggling with executive functioning, while their WMIs are lower than the average for children with ADHD, indicating that they may be struggling with attentional control. These findings suggest a cognitive and attention-related issue.

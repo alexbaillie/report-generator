@@ -3,6 +3,30 @@ const path = require('path');
 
 let mainWindow;
 
+function loadDevServer(mainWindow) {
+  let port = 5173;
+  const maxPort = 5180;
+  const tryLoad = () => {
+    mainWindow.loadURL(`http://localhost:${port}`);
+  };
+  const checkTitle = () => {
+    const title = mainWindow.getTitle();
+    if (title === 'Psychological Report Generator') {
+      mainWindow.show();
+    } else {
+      port++;
+      if (port <= maxPort) {
+        tryLoad();
+      } else {
+        mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+        mainWindow.show();
+      }
+    }
+  };
+  mainWindow.webContents.on('dom-ready', checkTitle);
+  tryLoad();
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -20,15 +44,11 @@ function createWindow() {
 
   // Load the app
   if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173');
+    loadDevServer(mainWindow);
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

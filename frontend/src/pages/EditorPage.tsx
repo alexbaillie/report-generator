@@ -1,6 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Save, Upload, Feather, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
+
+interface Template {
+  id: number;
+  name: string;
+  description: string;
+  template_type: string;
+  content: string;
+  is_default: boolean;
+}
 
 export default function EditorPage() {
   const [content, setContent] = useState('');
@@ -8,7 +17,21 @@ export default function EditorPage() {
   const [searchTemplate, setSearchTemplate] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const data = await api.getTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  };
 
   const exampleParagraphs = [
     {
@@ -25,27 +48,24 @@ export default function EditorPage() {
     },
   ];
 
-  const exampleTemplates = [
-    {
-      name: 'Example Template Name 1',
-      description: 'Lorem ipsum dolor sit.',
-      content: 'NEUROPSYCHOLOGICAL ASSESSMENT REPORT\n\nPatient Name: [NAME]\nDate of Birth: [DOB]\nDate of Assessment: [DATE]\n\n1. REASON FOR REFERRAL\n[Insert reason]\n\n2. BACKGROUND INFORMATION\n[Insert background]\n\n3. BEHAVIORAL OBSERVATIONS\n[Insert observations]\n\n4. TESTS ADMINISTERED\n[Insert tests]\n\n5. TEST RESULTS AND INTERPRETATION\n[Insert results]\n\n6. SUMMARY AND DIAGNOSTIC IMPRESSIONS\n[Insert summary]\n\n7. RECOMMENDATIONS\n[Insert recommendations]',
-    },
-    {
-      name: 'Example Template Name 2',
-      description: 'Lorem ipsum dolor sit amet.',
-      content: 'INTAKE ASSESSMENT\n\nClient Information:\nName: [NAME]\nDate: [DATE]\n\nChief Complaint:\n[Insert complaint]\n\nHistory:\n[Insert history]\n\nAssessment:\n[Insert assessment]\n\nPlan:\n[Insert plan]',
-    },
-  ];
-
   const suggestionPrompts = [
     'Add a confidentiality section',
     'Generate summary section',
   ];
 
   // Insert template content (replaces all content)
-  const handleTemplateClick = (template: typeof exampleTemplates[0]) => {
-    setContent(template.content);
+  const handleTemplateClick = (template: Template) => {
+    // Extract the template structure from the content (remove AI instructions)
+    const content = template.content;
+    const structureStart = content.indexOf('Psych Report Template') || content.indexOf('INTAKE ASSESSMENT') || 0;
+    const templateStructure = structureStart > 0 ? content.substring(structureStart) : content;
+    
+    // Remove the final instruction if present
+    const endMarker = 'Please fill in each section';
+    const endIndex = templateStructure.indexOf(endMarker);
+    const cleanStructure = endIndex > 0 ? templateStructure.substring(0, endIndex).trim() : templateStructure;
+    
+    setContent(cleanStructure);
   };
 
   // Insert paragraph at cursor position
@@ -154,16 +174,21 @@ export default function EditorPage() {
           </div>
 
           <div className="p-3 max-h-48 overflow-y-auto">
-            {exampleTemplates.map((template, idx) => (
-              <div
-                key={idx}
-                onClick={() => handleTemplateClick(template)}
-                className="mb-3 p-3 bg-dark-700 rounded cursor-pointer hover:bg-dark-600 transition-colors"
-              >
-                <h3 className="text-sm font-semibold text-white mb-1">{template.name}</h3>
-                <p className="text-xs text-gray-400">{template.description}</p>
-              </div>
-            ))}
+            {templates
+              .filter(template => 
+                template.name.toLowerCase().includes(searchTemplate.toLowerCase()) ||
+                template.description?.toLowerCase().includes(searchTemplate.toLowerCase())
+              )
+              .map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => handleTemplateClick(template)}
+                  className="mb-3 p-3 bg-dark-700 rounded cursor-pointer hover:bg-dark-600 transition-colors"
+                >
+                  <h3 className="text-sm font-semibold text-white mb-1">{template.name}</h3>
+                  <p className="text-xs text-gray-400">{template.description || 'No description'}</p>
+                </div>
+              ))}
           </div>
         </div>
       </div>

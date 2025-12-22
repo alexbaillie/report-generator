@@ -1,0 +1,13 @@
+Psychological report summary based on the input:
+
+INTRODUCTION:
+The child is referred due to concerns about attentional and academic performance. The teacher has reported difficulty sustaining attention and completing tasks. The WISC-V, VCI, WMI, and PSIIQ scores indicate a cognitive and attention-related issue. 
+
+Cognitive aspects:
+The child's WISC-V score is in the low range of normal for their age. This suggests that they have difficulty sustaining attention and completing tasks over longer periods of time. The VCI, WMi, PSIIQ scores indicate that the child has difficulty with working memory and inhibition, which are essential cognitive components for maintaining attention. These findings suggest that the child may be struggling to focus on academic tasks and sustain their attention throughout the day.
+
+Attention-related aspects:
+The child's PSIIQ score is in the moderate range of normal for their age, indicating that they have some difficulties with inhibition and selective attention. This suggests that the child may struggle to maintain focus on tasks that require sustained attention. The child's WISC-V score indicates that they are struggling with working memory, which is a crucial component for maintaining attention over longer periods of time. These findings suggest that the child may be experiencing difficulties in retaining information and regulating their attention throughout the day.
+
+Conclusion:
+Based on the above data, it can be inferred that the child has cognitive and attention-related issues. The child's WISC-V score indicates that they have difficulty sustaining attention over longer periods of time, while their VCI, WMi, PSIIQ scores indicate that they are struggling with working memory and inhibition. These findings suggest that the child may be experiencing difficulties in maintaining focus on academic tasks and sustaining their attention throughout the day. The report should include recommendations for addressing these issues to help the child improve their cognitive and attention-related skills.

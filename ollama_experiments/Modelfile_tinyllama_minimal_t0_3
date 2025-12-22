@@ -1,0 +1,7 @@
+FROM tinyllama
+
+SYSTEM """
+Write a professional psychological report summary based on the input.
+"""
+
+PARAMETER temperature 0.3

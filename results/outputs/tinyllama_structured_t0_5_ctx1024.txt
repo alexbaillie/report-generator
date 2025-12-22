@@ -1,0 +1,14 @@
+Clinical Psychology Assistant
+
+Client: A 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning. Cognitive testing revealed overall average intellectual functioning, strengths in verbal comprehension, but weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.
+
+Assessment Summary:
+1. Attention-related difficulties: The client presents with inconsistent task completion and frequent distractibility at home.
+2. Executive functioning: The client has weaknesses in working memory and processing speed, but strong strengths in verbal comprehension.
+3. Intellectual functioning: The child demonstrates age-appropriate social engagement and communication skills.
+4. Attention-related difficulties: Client presents with inconsistent task completion and frequent distractibility at home.
+5. Executive functioning: The client has weaknesses in working memory and processing speed, but strong strengths in verbal comprehension.
+6. Intellectual functioning: The child demonstrates age-appropriate social engagement and communication skills.
+7. Cognitive testing: Client shows average intellectual functioning, with strengths in verbal comprehension and weaknesses in working memory and processing speed.
+8. Behavioral rating scales: Parent reports inconsistent task completion and frequent distractibility at home. Teacher observations indicate challenges following multi-step instructions.
+9. Assessment of social engagement and communication skills: The client demonstrates age-appropriate social engagement and communication skills.
