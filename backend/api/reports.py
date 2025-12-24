@@ -3,22 +3,23 @@ Reports API endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Optional
 from pydantic import BaseModel
 from datetime import datetime
 from database.db import get_db
 from database.models import Report
-from services.report_generator import generate_report
+from services.report_generator import generate_report, generate_report_section
 
 router = APIRouter()
 
-class ReportCreate(BaseModel):
-    title: str
-    patient_name: str
-    report_type: str
+class SectionGenerationRequest(BaseModel):
     template_id: int
+    section_name: str
     document_ids: List[int] = []
-    additional_inputs: dict = {}
+    section_inputs: dict = {}
+
+class SectionGenerationResponse(BaseModel):
+    section_content: str
 
 class ReportResponse(BaseModel):
     id: int
@@ -32,30 +33,55 @@ class ReportResponse(BaseModel):
     class Config:
         from_attributes = True
 
-@router.post("/generate", response_model=ReportResponse)
-async def create_report(report_data: ReportCreate, db: Session = Depends(get_db)):
-    """Generate a new psychological report"""
+class GenerateReportRequest(BaseModel):
+    title: str
+    patient_name: str
+    report_type: str
+    template_id: int
+    document_ids: List[int] = []
+    additional_inputs: Dict = {}
+
+@router.post("/generate-section", response_model=SectionGenerationResponse)
+async def generate_section(request: SectionGenerationRequest, db: Session = Depends(get_db)):
+    """Generate a specific section of a psychological report"""
     try:
-        # Generate report content using AI
+        # Generate section content using AI
+        section_content = await generate_report_section(
+            db=db,
+            template_id=request.template_id,
+            section_name=request.section_name,
+            document_ids=request.document_ids,
+            section_inputs=request.section_inputs
+        )
+        
+        return SectionGenerationResponse(section_content=section_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate", response_model=ReportResponse)
+async def generate_report_endpoint(request: GenerateReportRequest, db: Session = Depends(get_db)):
+    """Generate a full report by combining section outputs and save it"""
+    try:
+        # Generate final content from provided sections
         content = await generate_report(
             db=db,
-            template_id=report_data.template_id,
-            document_ids=report_data.document_ids,
-            additional_inputs=report_data.additional_inputs
+            template_id=request.template_id,
+            document_ids=request.document_ids,
+            additional_inputs=request.additional_inputs,
         )
-        
-        # Save report to database
-        db_report = Report(
-            title=report_data.title,
-            patient_name=report_data.patient_name,
-            report_type=report_data.report_type,
-            content=content
+
+        # Persist report
+        report = Report(
+            title=request.title,
+            patient_name=request.patient_name,
+            report_type=request.report_type,
+            content=content,
         )
-        db.add(db_report)
+        db.add(report)
         db.commit()
-        db.refresh(db_report)
-        
-        return db_report
+        db.refresh(report)
+
+        return report
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -1,3 +1,68 @@
-Client: A 7-year-old boy referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of attention and executive functioning, while overall intellectual functioning is average. Strengths were noted in verbal comprehension, while working memory and processing speed scores are comparatively weak. The child demonstrates age-appropriate social engagement and communication skills.
+Psych Report Template
 
-Assessment Summary: The client presents with attention deficit hyperactivity disorder (ADHD) and impulsivity issues, as well as inconsistent task completion and challenges with following multi-step instructions. The client's intelligence quotient (IQ) is relatively high, indicating a strong potential for growth and development in the areas of attention and executive functioning. However, their overall intellectual functioning and social engagement skills are below average compared to those in age-appropriate settings.
+PATIENT
+Name: [Student's Name]
+Chart Number: [Chart Number]
+Date of Birth: [Date of Birth]
+Date of Assessment: [Date of Assessment]
+Age at Assessment: [Age at Assessment]
+Date of Conference: [Date of Conference]
+Legal Guardian: [Legal Guardian Name]
+
+TEAM
+Developmental Pediatrician:
+Psychologist: [Psychologist's Name]
+Assessing Clinician: [Case Manager Name]
+Speech Language Pathologist: [SLP Assistant's Name]
+Social Worker: [Social Worker's Name]
+Case Manager: [Case Manager's Name]
+
+CONTENTS
+
+SUMMARIES
+Diagnostic Summary:
+According to the Psychologist's observation, this student has been diagnosed with attention deficit hyperactivity disorder (ADHD) for 2 years. The student is noted to be moderately impulsive and tends to have difficulty staying focused on tasks or responsibilities.
+
+RECOMMENDATIONS FOR SERVICE
+
+Strategies
+- Use of stimulant medication, if recommended by the psychologist
+- Strong focus and organization skills in all areas of life
+
+SUPPORTING INFORMATION
+Reason for Referral: [Student's Behaviour/Performance]
+Social history and family environment: [Explanation of relevant issues or events]
+Previous psychological evaluation completed: [Relevant information about previous evaluations, if applicable]
+
+SUPPORTING INFORMATION
+Reason for Referral: [Student's Behaviour/Performance]
+Social history and family environment: [Explanation of relevant issues or events]
+Previous psychological evaluation completed: [Relevant information about previous evaluations, if applicable]
+
+SUMMARIES
+Diagnostic Summary:
+According to the Psychologist's observation, this student has been diagnosed with attention deficit hyperactivity disorder (ADHD) for 2 years. The student is noted to be moderately impulsive and tends to have difficulty staying focused on tasks or responsibilities.
+
+RECOMMENDATIONS FOR SERVICE
+
+Strategies
+- Use of stimulant medication, if recommended by the psychologist
+- Strong focus and organization skills in all areas of life
+
+SUPPORTING INFORMATION
+Reason for Referral: [Student's Behaviour/Performance]
+Social history and family environment: [Explanation of relevant issues or events]
+Previous psychological evaluation completed: [Relevant information about previous evaluations, if applicable]
+
+SUPPORTING INFORMATION
+Reason for Referral: [Student's Behaviour/Performance]
+Social history and family environment: [Explanation of relevant issues or events]
+Previous psychological evaluation completed: [Relevant information about previous evaluations, if applicable]
+
+CONCLUSION:
+Based on the above information and the student's behaviour and performance, it is recommended that this student undergo a thorough assessment to determine whether they are a candidate for treatment with medication or alternative strategies. It is also recommended that the student participate in a school program that promotes academic and social skills as well as focus and organization. The psychologist has conducted an in-depth case history, examined the student's strengths and weaknesses, and reviewed relevant information from other sources such as family members and educators. The assessment is expected to be completed within [Number of hours] days.
+
+ADDITIONAL INFORMATION:
+- Parent reports mixed response to medication, with some improvement in focus but continued chalease with organization and task completion.
+- Homework takes significantly longer than expected, often requiring 2-3 hours per night.
+- Student enjoy participating in specialized programs for students with learning differences.

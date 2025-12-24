@@ -1,1 +1,70 @@
-Cognitively, the client is an average-performing individual with average intellectual functioning, exhibiting above-average strengths in verbal comprehension and below-average weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills, indicating no significant emotional or behavioral concerns related to attention.
+Psych Report Template
+
+PAPIER
+Name: ________________
+Chart number: ___________
+Date of birth: __________
+Date of assessment: ____________
+Age at assessment: _____________
+Date of conference: ____________
+Legal guardian: _____________
+
+TEAM
+Developmental Pediatrician: __________________
+Psychologist: ___________________
+Assessing Clinician: __________________
+Speech Language Pathologist: _____________
+Social worker: ____________________
+Case manager: _____________________
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of finding(s):
+
+RECOMMENDATIONS FOR SERVICE
+
+STRATEGIES
+Allowances:
+Accommodaion(s):
+Instructional Strategie(s):
+
+SUPPORTING INFORMATION
+Reason for referral: ____________________
+Sources of information: ________________
+Background information: _______________
+- Presenting concerns (as provided by...)
+- Family History
+- Developmental and Medical History
+- Educational History
+- Previous Schools and Programming
+- Previous Assessments & Intervention(s): ______________________
+Behavioural Observations:
+Tests administere(s):
+Parent/teacher report measures administere(s):
+Information on the interpretation of test scores:
+
+APPENDICE(S)
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate.
+
+
+Source Documents:
+
+--- Test Data ---
+The client is a 7-year-old child referred for concerns related to attenion, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and chaullenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inatteention and executive functioning.
+
+Cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker. No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrate(s) age-appropriate social engagement and communication skills.
+
+Session_observations: During the assessment session, the child appeared coopera(s):
+During the assessment session, the child demonstrated good rapport with the examine(s):
+Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attenion and executive functioning. At that time, the child was diagnosed with ADHD and started on stimula(s):
+Stimula(s): ___________________
+Medication: ________________
+
+Other_info: The child attend(s) a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per night. The child enjoys art and music activities and participates in (s):
+Soc(c)er(s): ____________________
+
+Pl(s) generate a professional psychological report based on the above information. The report should be well-structured, clear, and follow professional standards.

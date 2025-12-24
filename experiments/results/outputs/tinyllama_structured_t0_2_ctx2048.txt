@@ -1,5 +1,74 @@
-Clinical Psychology Assistant
+Psych Report Template
 
-The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning. Cognitive testing revealed overall average intellectual functioning, strengths in verbal comprehension, but weaknesses in working memory and processing speed. The child demonstrates age-appropriate social engagement and communication skills.
+PAHILIA
+Name:
+Chart number:
+Date of birth:
+Date of assessment:
+Age at assessment:	
+Date of conference:	
+Legal guardian:	
 
-The client's attention-related difficulties are attributed to a combination of factors including inconsistent task completion, frequent distractibility at home, and challenges with following multi-step instructions. These factors may contribute to the child's inattention and impulsivity, which can impact academic performance. The child's emotional and behavioral concerns are age-appropriate and do not require specialized treatment beyond attention-related difficulties.
+TEAM
+Developmental Pediatrician:	
+Psychologist:	
+Assessing Clinician:	
+Speech Language Pathologist:	
+Social worker:	
+Case manager:   
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of finding(s):
+
+RECOMMENDATIONS FOR SERVICE
+
+STRATEGIES
+Allowances:
+Accommodaion(s):
+Instructional Strategie(s):
+
+SUPPORTING INFORMATION
+Reason for referral:
+Sources of information:
+Background information:
+- Presenting concerns (as provided by...)
+- Family History
+- Developmental and Medical History
+- Educational History
+- Previous Schools and Programming
+- Previous Assessments & Intervention(s):
+Tests administered:
+Parent/teacher report measures administere(s):
+Information on the interpretation of test scores:
+
+APPENDICE(S)
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate.
+
+
+
+Source Documents:
+
+--- Test Data ---
+The client is a 7-year-old child referred for concerns related to attenion, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and cha Leeechnages with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.
+
+Cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker. No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrate(s) age-approprate social engagement and communication skills.
+
+Additional Information:
+
+session_observations: 
+During the assessment session, the child appeared coopera(s):
+Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attention and executive functioning. At that time, the child was diagnosed with ADHD and started on stimula(s):
+Medication. Parent reports mixed response to medication, with some improvement in focus but continued cha(s):
+Organization and task completion.
+
+Other_info: 
+The child attend(s) a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per ni(s):
+Hour. The child enjoys art and music activities and participates in soc(s):
+Ce(s):
+
+Pl(s) generate a professional psychological report based on the above information. The report should be well-structed, clear, and follow professional standards.

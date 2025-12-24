@@ -16,6 +16,11 @@ export const api = {
     return response.data;
   },
 
+  async generateReportSection(data: { template_id: number; section_name: string; document_ids: number[]; section_inputs: any }) {
+    const response = await apiClient.post('/reports/generate-section', data);
+    return response.data;
+  },
+
   async getReports() {
     const response = await apiClient.get('/reports/');
     return response.data;

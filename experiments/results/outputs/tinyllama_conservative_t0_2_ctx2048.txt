@@ -1,1 +1,81 @@
-The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and challenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning, but overall average intellectual functioning. Cognitive testing revealed overall average intellectual functioning, strengths noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker. No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrates age-appropriate social engagement and communication skills.
+[Psych Report Template]
+
+PAHILIA PATIENT
+Name: [Patient's Name]
+Chart Number: [Chart Number]
+Date of Birth: [Date of Birth]
+Date of Assessment: [Date of Assessment]
+Age at Assessment: [Age at Assessment]
+Date of Conference: [Date of Conference]
+Legal Guardian: [Name and Title]
+
+TEAM
+[Developmental Pediatrician], [Psychologist], [Assessing Clinician], [Speech Language Pathologist], [Social Worker], [Case Manager]
+
+CONTENTS
+
+SUMMARIES
+Diagnostic Summary:
+Summary of Finding:
+
+RECOMMENDATIONS FOR SERVICE
+Strategies:
+Allowances:
+Instructional Strategies:
+
+SUPPORTING INFORMATION
+Reason for Referral: [Reason for Referral]
+Social History:
+- Presenting Concerns (as provided by...): [Presenting Concerns]
+- Family History:
+- Developmental and Medical History:
+- Educational History:
+- Previous Schools and Programming:
+- Previous Assessments & Intervention:
+Behavioral Observations:
+Tests Administered:
+Parent/Teacher Report Measures Administered:
+Information on the Interpretation of Test Scores:
+
+APPENDICE
+Planning for Treatment and Services:
+- Presentation of Treatment Plan (if applicable): [Presentation of Treatment Plan]
+- Assessment of Needs: [Assessment of Needs]
+- Referral to Other Providers: [Referral to Other Providers]
+
+Planning for Follow-up and Support:
+- Planned Follow-Up (if applicable): [Planned Follow-Up]
+- Planned Support Services: [Planned Support Services]
+
+APPENDIXES 
+
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate.
+
+
+
+Source Documents:
+
+--- Test Data ---
+The child is a 7-year-old girl referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and chaullenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.
+
+Cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker.
+
+No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrated age-approprate social engagements and communication skills.
+
+
+Additional Information:
+
+session_observations: 
+During the assessment session, the child appeared cooperaative and engaged. She demonstrated good rapport with the examinee and appeared motivated to perform well on tasks. Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+
+previous_report: 
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attention and executive functioning. At that time, the child was diagnosed with ADHD and started on stimulant medication. Parent reports mixed response to medication, with some improvement in focus but continued chaullenges with organization and task completion.
+
+
+other_info: 
+The child attend a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per nihgt. The child enjoys art and music activities and participates in soccer after school.
+
+
+
+Please generate a professional psychological report based on the above information. The report should be well-structured, clear, and follow professional standards.

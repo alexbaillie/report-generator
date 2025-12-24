@@ -1,3 +1,116 @@
-The client is a 7-year-old child referred for concerns related to attention, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and chaos with following multi-step instructions. Behavioral rating scales completed by both parents and teachers reveal elevated scores in the areas of attention and executive functioning, but generally weakened scores for processing speed and verbal comprehension. Cognitive testing revealed overall average intellectual functioning and strengths noted in verbal comprehension. The child is age-appropriate in social engagement and communication skills. 
+[Client's name]
+[Chart number]
+[Date of birth]
+[Date of assessment]
+[Age at assessment]
+[Date of conference]
 
-This clinical psychology assistant summarized the patient's concerns related to attention, impulsivity, and academic performance, highlighting specific areas of weakness in cognitive functioning and emotional/behavioral concerns beyond these. The report provides a comprehensive overview of the client's current state of care and any potential treatment options available for addressing their needs.
+Psych Report Template
+
+PAHILL
+Name: [Chart Number]
+Chart Number: [Chart Number]
+Date of birth: [Date of birth]
+Date of assessment: [Date of assessment]
+Age at assessment: [Age at assessment]
+Date of conference: [Date of conference]
+Legal guardian: [Name]
+
+TEAM
+Developmental Pediatrician: [Psychologist]
+Psychologist: [Assessing Clinician]
+Assessing Child: [Client's name]
+Speech Languae Pathologist: [Social worker]
+Case Manager: [Name]
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of finding:
+
+RECOMMENDATIONS FOR SERVICE
+
+STRATEGIES
+Allowances:
+Accommodaion:
+Instructional Straights:
+
+SUPPORTING INFORMATION
+Reason for referral: [Reason for referral]
+Social history provided by parent, teacher and/or school principal.
+Previous psychological evaluation completed 2 years ago indicates similar concerns with [Attention, Executive Functioning, Attention/Executive Functioning] (see attachments). At that time, the child was diagnosed with ADHD and started on stimulaent medication. Parent reports mixed response to medication, with some improvement in focus but continued chaullenges with organization and task completion. Child attended a specialized program for students with learning differences and receives additional support in [Mathematics/Reading] activities. Homework takes significantly longer than expected, often requiring 2-3 hours per night. The child enjoys art and music activities and participates in [Social/Sports programs].
+
+Plastic report will follow standard psychological evaluation guidelines with a section on the client's history. Please note that the assessment was completed [X number of days] ago. The following sections will be generated based on the information provided:
+
+TEST DATA
+The child is a 7-year-old child referred for concerns related to [Attention, Executive Functioning, Attention/Executive Functioning] (see attachments). Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and chaullenges with following multi-step instructions. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of [Inattention/Impulsivity, Executive Functioning, Attention/Executive Functioning] (see attachments).
+
+Cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker. The child demonstrated good rapport with the examiner and appeared motivated to perform well on tasks. Attention was variable throughout the session, with occasional distractibility noted. The child requires frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+RECOMMENDED PRACTICES
+[Practices recommended by psychologist based on client's history and needs]
+
+SUPPORTING INFORMATION
+Reason for referral: [Reason for referral]
+Social history provided by parent, teacher and/or school principal. Previous psychological evaluation completed 2 years ago indicates similar concerns with attention and executive functioning (see attachments). At that time, the child was diagnosed with ADHD and started on stimulaent medication. Parent reports mixed response to medication, with some improvement in focus but continued chaullenges with organization and task completion. Child attended a specialized program for students with learning differences and receives additional support in [Mathematics/Reading] activities. Homework takes significantly longer than expected, often requiring 2-3 hours per night. The child enjoys art and music activities and participates in [Social/Sports programs].
+
+[Attachment 1: Diagnosis report (pdf)]
+[Attachment 2: Previous Psychological Evaluation (pdf)]
+
+PLACSE GENERATED REPORT
+
+[Client's name]
+[Chart Number]
+[Date of birth]
+[Date of assessment]
+[Age at assessment]
+[Date of conference]
+
+Psych Report Template
+
+PAHILL
+Name: [Client's Name]
+Chart Number: [Chart Number]
+Date of birth: [Date of birth]
+Date of assessment: [Date of assessment]
+Age at assessment: [Age at assessment]
+Date of conference: [Date of conference]
+Legal guardian: [Name]
+
+TEAM
+Developmental Pediatrician: [Psychologist]
+Psychologist: [Assessing Clinician]
+Assessing Child: [Client's Name]
+Speech Languae Pathologist: [Social worker]
+Case Manager: [Name]
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of finding:
+
+RECOMMENDATIONS FOR SERVICE
+[Recommendations based on previous psychological evaluation and client's history]
+
+STRATEGIES
+[Strategies recommended by psychologist based on client's history]
+
+SUPPPORTING INFORMATION
+Reason for referral: [Reason for referral]
+Social history provided by parent, teacher and/or school principal. Previous psychological evaluation completed 2 years ago indicates similar concerns with attention and executive functioning (see attachments). At that time, the child was diagnosed with ADHD and started on stimulaent medication. Parent reports mixed response to medication, with some improvement in focus but continued chaullenges with organization and task completion. Child attended a specialized program for students with learning differences and receives additional support in [Mathematics/Reading] activities.
+
+Plastic report will follow standard psychological evaluation guidelines with a section on the client's history:
+
+TEST DATA
+The child is a 7-year-old child referred for concerns related to attention, executive functioning, and attentional blink. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and chaullenges with following verbal and nonverbal communication. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of [Inattention/Impulsivity, Executive Functioning, Attention/Executive Functioning] (see attachments).
+
+Cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension and working memory. The child demonstrated good rapport with the examine
+r and appeared motivated to perform well on tasks. Attention was variable throughout previous psychological evaluation completed 2 years ago indicates similar concerns with attention and executive functioning (see attachments). At that time, the child was diagnosed with ADHD and started on stimulaent medication. Parent reports mixed response to medication, with some improvement in focus but continued chaullenges with organization and task completion. Child attended a specialized program for students with learning differences and receives additional support in [Mathematics/Reading] activities. Homework takes significantly longer than expected, often requiring 2-3 hours per night. The child enjoys art and music activities and participates in [Social/Sports programs].
+
+Practices recommended by psychologist based on client's history and needs:
+[Practices recommended by psychologist based on client's history and needs]
+
+[Attachment 1: Diagnosis report (pdf)]
+[Attachment 2: Previous Psychological Evaluation (pdf)]

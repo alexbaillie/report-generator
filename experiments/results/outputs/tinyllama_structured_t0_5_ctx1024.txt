@@ -1,3 +1,79 @@
-Clinical Psychology Assistant: 
+Psych Report Template
 
-The client, referred for concerns related to attention, impulsivity, and academic performance, is a 7-year-old child with inconsistent task completion and frequent distractibility at home. The parent reports difficulty sustaining attention during classroom tasks and frequent challenges with following multi-step instructions. The teacher observed behavioral rating scales indicating elevated scores in areas of inattention and executive functioning, while the child's cognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, but working memory and processing speed scores were comparatively weak. No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrates age-appropriate social engagement and communication skills.
+PAPIER
+Name:
+Chart number:
+Date of birth:
+Date of assessment:
+Age at assessment:	
+Date of conference:	
+Legal guardian:	
+
+TEAM
+Developmental Pediatrician:	
+Psychologist:	
+Assessing Clinician:	
+Speech Language Pathologist:	
+Social worker:	
+Case manager:   
+
+CONTENTS
+
+SUMMARIES
+Diagnostic summary:
+Summary of finding:
+
+RECOMMENDATIONS FOR SERVICE
+Strategies
+Allowances:
+Accommodaion:
+Instructional Strategie:
+
+SUPPORTING INFORMATION
+Reason for referral:
+Sources of information:
+Background information:
+- Presenting concerns (as provided by...)
+- Family History
+- Developmental and Medical History
+- Educational History
+- Previous Schools and Programming
+- Previous Assessments & Intervention:
+- Test Data:
+- Parent/teacher report measures administered:
+- Information on the interpretation of test scores:
+
+APPENDICE
+Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate.
+
+Source Documents:
+
+--- Test Data ---
+The client is a 7-year-old child referred for concerns related to attenion, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and cha Leezeongng. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.
+
+Coognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker.
+
+No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrate s age-approprate social engagement and communication skills.
+
+Session_observations: During the assessment session, the child appeared coopera ti ve and engaged. She demonstrated good rapport with the examine r and appeared motivated to perform well on tasks. Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attenion and executive functioning. At that time, the child was diagnosed with ADHD and started on stimula nt medication. Parent reports mixed response to medication, with some improvement in focus but continued cha llange with organization and task completion.
+
+Other_info: The child attend s a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per ni ght. The child enjoy s art and music activities and participates in soccer after school.
+
+Source Documents:
+
+--- Test Data ---
+The child is a 7-year-old child referred for concerns related to attenion, impulsivity, and academic performance. Parent reports difficulty sustaining attention during classroom tasks and frequent distractibility at home. Teacher observations indicate inconsistent task completion and cha Leezeongng. Behavioral rating scales completed by both parents and teachers indicate elevated scores in the areas of inattention and executive functioning.
+
+Coognitive testing revealed overall average intellectual functioning. Strengths were noted in verbal comprehension, while working memory and processing speed scores were comparatively weaker.
+
+No significant emotional or behavioral concerns were reported beyond attention-related difficulties. The child demonstrate s age-approprate social engagement and communication skills.
+
+Session_observations: During the assessment session, the child appeared coopera ti ve and engaged. She demonstrated good rapport with the examine r and appeared motivated to perform well on tasks. Attention was variable throughout the session, with occasional distractibility noted. The child required frequent redirection to maintain focus on test items. No significant behavioral concerns were observed during testing.
+
+Previous psychological evaluation completed 2 years ago indicated similar concerns with attenion and executive functioning. At that time, the child was diagnosed with ADHD and started on stimula nt medication. Parent reports mixed response to medication, with some improvement in focus but continued cha llange with organization and task completion.
+
+Other_info: The child attend s a specialized program for students with learning differences. She receives additional support in reading and math. Parent reports that homework takes significantly longer than expected, often requiring 2-3 hours per ni ght. The child enjoy s art and music activities and participates in soccer after school.
+
+Plea se generate a professional psychological report based on the above information. The report should be well-structured, clear, and follow professional standards.

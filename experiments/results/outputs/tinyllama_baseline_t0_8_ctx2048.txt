@@ -1,1 +1,43 @@
-Cognitively, the client is found to have average intellectual functioning with weaknesses in verbal comprehension and working memory, but strong processing speed. However, no significant emotional or behavioral concerns were reported beyond attention difficulties. The child displays age-appropriate social engagements and communication skills.
+[INSERT NAME HERE] (Psychologist) is pleased to present this professional neuropsychological report following an evaluation of [RELATED PERSON OR ANIMAL] as indicated in the PATIENT CHART NUMBER (XXXX). The assessment was completed on [DATE OF ASSSESSMENT] by the psychological team comprised of [DEVELOPLOMENAL PEDIATRICIAN], [PSYCHOLOGIST], and [ASSIGNED CLINNIAN].
+
+REPORT TYPE: Evaluation
+
+TEAM: Developmental Pediatrician, Psychologist, Assessing Clinician, Speech Language Pathologist, Social Worker, Case Manager.
+
+DESCRIPTION OF CONSIDERATIONS FOR RECOMMENDATIONS AND SERVICES: Based on the patient's psychological assessment, recommendations for supportive information are as follows:
+
+RECOMMENDATIONS FOR SERVICE: Allowances and strategies for addressing the following concerns/issues:
+
+STRATEGIES: Accordionation for parent/teacher reports measurments, background information, educational history, previous assessments & intervention, behavioral observations, tests administrated, parent/teacher report measures administrated, additional information. 
+
+SUPPORTING INFORMATION: Reason for referral: Presenting concerns (as provided by [DEVELOPLOMENAL PEDIATRICIAN], [PSYCHOLOGIST], and [ASSIGNED CLINNIAN]), family history, previous schools and programs, educational history, previous assessments & intervention, behavioral observations, tests administered. 
+
+INFOMATION ON THE INTERPRETATION OF TEST SCORES: Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate. [INSERT CONCERNS OR ISSUES TO BE RECOGNIZED AND WITHOUT WHICH COUNSELING/INTERVENTION MAY BE APPLIED]
+
+APPENDICE: Plan for test data
+
+PLACEMENT: The patient will participate in the following programs or services:
+
+- [DELEGATED MEDICAL DIAGNOSIS AND TREATMENT INFORMATION, IF APPLICABLE]
+
+SOURCE DOCUMENTS: Parent report data (parent report data), teacher reports (teacher report data), behavioral rating scales completed by both parents and teachers (behavioral rating scales completed by both parents and teachers), cogniative testing (cognitive testing), assessment data (assessment data), additional information.
+
+RESUME: Based on the previous evaluation, recommendations for supportive information are as follows: 
+
+RECOMMENDATIONS FOR SERVICES: Allowances and strategies for addressing the following concerns/issues:
+
+STRATEGIES: Accordionation for parent/teacher reports measures administrated, additional information. 
+
+SUPPORTING INFORMATION: Reason for referral: Presentinng concerns (as provided by [DEVELOPLOMENAL PEDIATRICIAN], [PSYCHOLOGIST], and [ASSIGNED CLINNIAN]), family history, previous schools and programs, educational history, previous assessments & intervention, behavioral observations, tests administrated. 
+
+INFOMATION ON THE INTERPRETATION OF TEST SCORES: Please fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate. [INSERT CONCERNS OR ISSUES TO BE RECOGNIZED AND WITHOUT WHICH COUNSELING/INTERVENTION MAY BE APPLIED]
+
+APPENDICE: Plan for test data
+
+PLACEMENT: The patient will participate in the following programs or services:
+
+- [DELEGATED MEDICAL DIAGNOSIS AND TREATMENT INFORMATION, IF APPLICABLE]
+
+SOURCE DOCUMENTS: Parent report data (parent report data), teacher reports (teacher report data), behavioral rating scales completed by both parents and teachers (behavioral rating scales completed by both parents and teachers), cogniative testing (cognitive testing), assessment data (assessment data), additional information.
+
+[INSERT REFEREE'S NAME HERE]

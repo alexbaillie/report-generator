@@ -16,7 +16,9 @@ app = FastAPI(
 # CORS middleware for local Electron app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    # Allow all origins during development to avoid CORS issues from different dev servers/electron
+    allow_origins=["*", "null"],  # include "null" for file:// origins
+    allow_origin_regex=".*",      # match any origin including custom/electron
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
