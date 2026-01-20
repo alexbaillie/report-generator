@@ -38,6 +38,8 @@ backend/data/
 *.db
 *.sqlite
 *.sqlite3
+frontend/release/
+frontend/.electron-cache/
 
 # Environment
 .env
