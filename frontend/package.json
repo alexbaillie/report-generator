@@ -44,30 +44,34 @@
   },
   "build": {
     "appId": "com.psychreport.app",
-    "productName": "Psychological Report Generator",
+    "productName": "PsychReportGen",
     "files": [
       "dist/**/*",
       "electron/**/*"
     ],
     "directories": {
-      "buildResources": "assets"
+      "buildResources": "assets",
+      "output": "release"
     },
     "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "assets/icon.ico"
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.ico",
+      "artifactName": "PsychReportGen-${version}.${ext}",
+      "executableName": "PsychReportGen"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "PsychReportGen"
     },
     "mac": {
-      "target": [
-        "dmg"
-      ],
+      "target": ["dmg"],
       "icon": "assets/icon.icns"
     },
     "linux": {
-      "target": [
-        "AppImage"
-      ],
+      "target": ["AppImage"],
       "icon": "assets/icon.png"
     }
   }
