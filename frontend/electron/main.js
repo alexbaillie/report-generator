@@ -1,8 +1,23 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+const http = require('http');
 const fs = require('fs');
 const os = require('os');
+
+const RENDERER_PROTOCOL = 'app';
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: RENDERER_PROTOCOL,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 // Global uncaught exception handler
 process.on('uncaughtException', (error) => {
@@ -17,8 +32,36 @@ process.on('uncaughtException', (error) => {
   }
 });
 
+function registerRendererProtocol() {
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+    return;
+  }
+
+  const distDir = path.normalize(path.join(__dirname, '..', 'dist'));
+  protocol.registerFileProtocol(RENDERER_PROTOCOL, (request, callback) => {
+    try {
+      const url = new URL(request.url);
+      let pathname = decodeURIComponent(url.pathname || '');
+      if (!pathname || pathname === '/') pathname = '/index.html';
+      if (pathname.startsWith('/')) pathname = pathname.slice(1);
+
+      const resolved = path.normalize(path.join(distDir, pathname));
+      if (!resolved.startsWith(distDir)) {
+        callback({ error: -6 });
+        return;
+      }
+
+      callback({ path: resolved });
+    } catch {
+      callback({ error: -6 });
+    }
+  });
+}
+
 // Backend process handle
 let backendProcess = null;
+let backendServerPid = null;
+let didStartBackend = false;
 const logStream = fs.createWriteStream(
   path.join(os.homedir(), 'report-generator-backend.log'),
   { flags: 'a' }
@@ -45,57 +88,189 @@ function logToFile(message) {
   }
 }
 
+// Helper function to get system command path
+function getSystemCommandPath(command) {
+  const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+  const system32 = path.join(systemRoot, 'System32');
+  
+  // Try multiple possible locations
+  const possiblePaths = [
+    path.join(system32, 'cmd.exe'),
+    path.join(systemRoot, 'SysWOW64', 'cmd.exe'),
+    'C:\\Windows\\System32\\cmd.exe',
+    'C:\\Windows\\SysWOW64\\cmd.exe',
+    'cmd.exe'  // Last resort
+  ];
+  
+  // Return the first path that exists
+  for (const p of possiblePaths) {
+    try {
+      fs.accessSync(p, fs.constants.X_OK);
+      return p;
+    } catch (e) {
+      // Continue to next path
+    }
+  }
+  
+  // Fallback to just 'cmd' if nothing else works
+  return 'cmd.exe';
+}
+
 // Start the backend process
 function startBackend() {
   try {
-    // In development, use the local path
-    // In production, look in the resources directory
-    let backendPath;
-    if (process.env.NODE_ENV === 'development') {
-      backendPath = path.join(__dirname, '..', '..', 'dist', 'report_generator_backend', 'run_backend.bat');
-    } else {
-      backendPath = path.join(process.resourcesPath, '..', 'dist', 'report_generator_backend', 'run_backend.bat');
+    backendServerPid = null;
+    didStartBackend = false;
+    // In development, use the repo-root dist output
+    // In production, use the packaged resources directory
+    const backendDir = (process.env.NODE_ENV === 'development')
+      ? path.join(__dirname, '..', '..', '..', 'dist', 'report_generator_backend')
+      : path.join(process.resourcesPath, 'report_generator_backend');
+
+    const backendExePath = path.join(backendDir, 'report_generator_backend.exe');
+    const backendBatPath = path.join(backendDir, 'run_backend.bat');
+
+    if (!fs.existsSync(backendExePath) && !fs.existsSync(backendBatPath)) {
+      const msg = `Backend launcher not found. Expected: ${backendExePath} or ${backendBatPath}`;
+      logToFile(msg);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        showErrorInWindow(msg);
+      }
+      return;
     }
-    
-    logToFile(`Starting backend from: ${backendPath}`);
-    
-    backendProcess = spawn(backendPath, [], {
-      cwd: path.dirname(backendPath),
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: true  // Use shell to ensure .bat files work correctly
-    });
+
+    if (fs.existsSync(backendExePath)) {
+      logToFile(`Starting backend exe from: ${backendExePath}`);
+
+      backendProcess = spawn(
+        backendExePath,
+        [],
+        {
+          cwd: backendDir,
+          detached: false,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true
+        }
+      );
+    } else {
+      // Fallback: run the batch file via cmd.exe
+      const cmdPath = getSystemCommandPath('cmd.exe');
+      logToFile(`Starting backend bat from: ${backendBatPath}`);
+      logToFile(`Using command processor at: ${cmdPath}`);
+
+      backendProcess = spawn(
+        cmdPath,
+        ['/c', backendBatPath],
+        {
+          cwd: backendDir,
+          detached: false,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          shell: false,
+          windowsHide: true
+        }
+      );
+    }
+
+    if (backendProcess && backendProcess.pid) {
+      logToFile(`Backend process spawned with PID: ${backendProcess.pid}`);
+      didStartBackend = true;
+    }
+
+    // Wait for backend to actually be reachable
+    waitForBackendReady();
 
     // Log backend output
     backendProcess.stdout.on('data', (data) => {
       const output = data.toString().trim();
       logToFile(`[BACKEND] ${output}`);
+
+      const pidMatch = output.match(/Started server process \[(\d+)\]/);
+      if (pidMatch && pidMatch[1]) {
+        backendServerPid = Number(pidMatch[1]);
+        if (!Number.isNaN(backendServerPid)) {
+          logToFile(`Detected backend server PID: ${backendServerPid}`);
+        } else {
+          backendServerPid = null;
+        }
+      }
       
       // Check if backend is ready
       if (output.includes('Uvicorn running on') || output.includes('Application startup complete')) {
-        mainWindow.webContents.send('backend-ready');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          handleBackendReady();
+          mainWindow.webContents.send('backend-ready');
+        }
       }
     });
 
     backendProcess.stderr.on('data', (data) => {
-      logToFile(`[BACKEND ERROR] ${data}`);
+      const errorOutput = data.toString().trim();
+      logToFile(`[BACKEND STDERR] ${errorOutput}`);
+
+      // Capture the actual Uvicorn server process PID so we can reliably stop it on app exit.
+      // Example: "INFO:     Started server process [2692]"
+      const pidMatch = errorOutput.match(/Started server process \[(\d+)\]/);
+      if (pidMatch && pidMatch[1]) {
+        backendServerPid = Number(pidMatch[1]);
+        if (!Number.isNaN(backendServerPid)) {
+          logToFile(`Detected backend server PID: ${backendServerPid}`);
+        } else {
+          backendServerPid = null;
+        }
+      }
+
+      // Uvicorn and other libraries often write non-fatal logs to stderr.
+      // Only surface an in-app error for likely-fatal patterns.
+      const looksFatal = /\b(traceback|exception|fatal|critical|error)\b/i.test(errorOutput);
+      if (looksFatal && mainWindow && !mainWindow.isDestroyed()) {
+        showErrorInWindow(`Backend error: ${errorOutput}`);
+      }
     });
 
     backendProcess.on('error', (error) => {
-      logToFile(`Backend process error: ${error.message}`);
+      const errorMsg = `Backend process error: ${error.message}\n` +
+                     `Working Directory: ${backendDir}`;
+      logToFile(errorMsg);
+      console.error(errorMsg);
+      
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        showErrorInWindow(`Failed to start backend: ${error.message}\n\nCheck the log file for more details.`);
+      }
     });
 
-    backendProcess.on('close', (code) => {
-      logToFile(`Backend process exited with code ${code}`);
+    backendProcess.on('close', (code, signal) => {
+      const exitMsg = `Backend process exited with code ${code}${signal ? `, signal: ${signal}` : ''}`;
+      logToFile(exitMsg);
+      
+      if (code !== 0 && code !== null) {
+        console.error(exitMsg);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          showErrorInWindow(`Backend process exited with code ${code}. Check the log file for details.`);
+        }
+      }
+      
       backendProcess = null;
     });
 
     // Ensure process is killed when app exits
-    process.on('exit', () => {
+    const cleanup = () => {
       if (backendProcess) {
-        backendProcess.kill();
+        logToFile('Terminating backend process...');
+        if (process.platform === 'win32') {
+          spawn('taskkill', ['/pid', backendProcess.pid, '/f', '/t']);
+        } else {
+          backendProcess.kill();
+        }
       }
-    });
+
+      if (process.platform === 'win32' && backendServerPid) {
+        spawn('taskkill', ['/pid', String(backendServerPid), '/f', '/t']);
+      }
+    };
+    
+    process.on('exit', cleanup);
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
 
   } catch (error) {
     logToFile(`Failed to start backend: ${error.message}`);
@@ -103,6 +278,50 @@ function startBackend() {
 }
 
 // Stop the backend process
+function isPidAlive(pid) {
+  if (!pid || typeof pid !== 'number') return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function stopBackendSync() {
+  try {
+    if (process.platform !== 'win32') {
+      stopBackend();
+      return;
+    }
+
+    const pidsToKill = [];
+    if (backendProcess && backendProcess.pid) pidsToKill.push(backendProcess.pid);
+    if (backendServerPid && backendServerPid !== backendProcess?.pid) pidsToKill.push(backendServerPid);
+
+    for (const pid of pidsToKill) {
+      spawnSync('taskkill', ['/pid', String(pid), '/f', '/t'], { stdio: 'ignore', windowsHide: true });
+    }
+
+    if (didStartBackend) {
+      spawnSync('taskkill', ['/im', 'report_generator_backend.exe', '/f', '/t'], { stdio: 'ignore', windowsHide: true });
+    }
+
+    const start = Date.now();
+    const timeoutMs = 4000;
+    while (Date.now() - start < timeoutMs) {
+      if (!isPidAlive(backendServerPid) && !isPidAlive(backendProcess?.pid)) {
+        break;
+      }
+      spawnSync('powershell', ['-NoProfile', '-Command', 'Start-Sleep -Milliseconds 150'], { stdio: 'ignore', windowsHide: true });
+    }
+  } finally {
+    backendProcess = null;
+    backendServerPid = null;
+    didStartBackend = false;
+  }
+}
+
 function stopBackend() {
   if (backendProcess) {
     logToFile('Stopping backend process...');
@@ -114,10 +333,102 @@ function stopBackend() {
     }
     backendProcess = null;
   }
+
+  // In some packaging modes, the launcher process can exit and leave the Uvicorn server process running.
+  // Always attempt to kill the server PID if we saw it.
+  if (process.platform === 'win32' && backendServerPid) {
+    logToFile(`Stopping backend server process PID: ${backendServerPid}`);
+    spawn('taskkill', ['/pid', String(backendServerPid), '/f', '/t']);
+    backendServerPid = null;
+  }
+
+  if (process.platform === 'win32' && didStartBackend) {
+    spawn('taskkill', ['/im', 'report_generator_backend.exe', '/f', '/t']);
+    didStartBackend = false;
+  }
 }
 
 let mainWindow;
 let isBackendReady = false;
+
+// Enforce single-instance behavior (prevents double-launch port collisions)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+function handleBackendReady() {
+  if (isBackendReady) return;
+  isBackendReady = true;
+  logToFile('Backend is ready');
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Reload the window to show the actual app
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+      mainWindow.loadURL(`${RENDERER_PROTOCOL}://./`);
+    }
+    mainWindow.show();
+  }
+}
+
+function waitForBackendReady() {
+  const url = 'http://127.0.0.1:8000/health';
+  const timeoutMs = 60000;
+  const intervalMs = 500;
+  const start = Date.now();
+
+  const tryOnce = () => {
+    const req = http.get(url, (res) => {
+      // Drain response
+      res.resume();
+
+      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+        handleBackendReady();
+        return;
+      }
+    });
+
+    req.on('error', () => {
+      // Backend not ready yet
+    });
+
+    req.setTimeout(2000, () => {
+      req.destroy(new Error('health check timeout'));
+    });
+  };
+
+  const timer = setInterval(() => {
+    if (isBackendReady) {
+      clearInterval(timer);
+      return;
+    }
+
+    if (Date.now() - start > timeoutMs) {
+      clearInterval(timer);
+      const msg = `Backend did not become ready within ${timeoutMs / 1000}s.`;
+      logToFile(msg);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        showErrorInWindow(msg);
+      }
+      return;
+    }
+
+    tryOnce();
+  }, intervalMs);
+
+  // Try immediately too
+  tryOnce();
+}
 
 function loadDevServer(mainWindow) {
   let port = 5173;
@@ -215,6 +526,13 @@ function createWindow() {
 
   // Error handling for failed page loads
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    // ERR_ABORTED (-3) is commonly triggered by interrupted navigations (e.g., a second loadFile)
+    // and is not a real failure.
+    if (errorCode === -3) {
+      logToFile(`Navigation aborted for ${validatedURL}: ${errorDescription} (Code: ${errorCode})`);
+      return;
+    }
+
     const errorMsg = `Failed to load ${validatedURL}: ${errorDescription} (Code: ${errorCode}, Main Frame: ${isMainFrame})`;
     console.error(errorMsg);
     logToFile(errorMsg);
@@ -237,10 +555,12 @@ function createWindow() {
       `Exit code: ${details.exitCode || 'unknown'}`
     );
   });
-  
-  // Enable DevTools in production for debugging
-  mainWindow.webContents.openDevTools();
-  logToFile('Developer Tools opened for debugging');
+
+  // Only open DevTools in development
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+    logToFile('Developer Tools opened for debugging');
+  }
 
   // Log when the window is ready to show
   mainWindow.once('ready-to-show', () => {
@@ -253,6 +573,14 @@ function createWindow() {
     logToFile(`Electron version: ${process.versions.electron}`);
     logToFile(`Chrome version: ${process.versions.chrome}`);
     logToFile(`Node version: ${process.versions.node}`);
+    logToFile(`Platform: ${process.platform} ${process.arch}`);
+    logToFile(`SystemRoot: ${process.env.SystemRoot || 'Not set'}`);
+    logToFile(`PATH: ${process.env.PATH || 'Not set'}`);
+    
+    // Only open DevTools in development
+    if (process.env.NODE_ENV === 'development') {
+      mainWindow.webContents.openDevTools();
+    }
   });
 
   // Load the app
@@ -273,7 +601,11 @@ function createWindow() {
         return;
       }
 
-      mainWindow.loadFile(indexPath).catch(error => {
+      mainWindow.loadURL(`${RENDERER_PROTOCOL}://./`).catch(error => {
+        if (error && typeof error.message === 'string' && error.message.includes('ERR_ABORTED')) {
+          logToFile(`Navigation aborted while loading index.html: ${error.message}`);
+          return;
+        }
         const errorMsg = `Failed to load index.html: ${error.message}`;
         logToFile(errorMsg);
         showErrorInWindow(errorMsg);
@@ -330,6 +662,7 @@ function showLoadingScreen() {
 
 app.whenReady().then(() => {
   logToFile('App is ready');
+  registerRendererProtocol();
   createWindow();
   
   // Start the backend when in production
@@ -359,7 +692,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   logToFile('All windows closed');
-  stopBackend();
+  stopBackendSync();
   
   // On macOS it's common for applications to stay open until the user quits explicitly
   if (process.platform !== 'darwin') {
@@ -398,7 +731,11 @@ ipcMain.on('backend-ready', () => {
   logToFile('Backend is ready');
   if (mainWindow) {
     // Reload the window to show the actual app
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
+      mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    } else {
+      mainWindow.loadURL(`${RENDERER_PROTOCOL}://./`);
+    }
     mainWindow.show();
   }
 });

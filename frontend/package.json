@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"ping -n 6 127.0.0.1 >nul && cross-env NODE_ENV=development electron .\"",
+    "preelectron:build": "powershell -ExecutionPolicy Bypass -File ..\\build_exe.ps1",
     "electron:build": "npm run build && electron-builder",
     "test": "jest",
     "test:watch": "jest --watch"
@@ -48,6 +49,12 @@
     "files": [
       "dist/**/*",
       "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/report_generator_backend",
+        "to": "report_generator_backend"
+      }
     ],
     "directories": {
       "buildResources": "assets",

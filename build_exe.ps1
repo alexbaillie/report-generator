@@ -1,10 +1,14 @@
 # Build script for creating a standalone executable of the FastAPI backend
 
+$ErrorActionPreference = "Stop"
+
+Set-Location -Path $PSScriptRoot
+
 # Ensure PyInstaller is installed
-$pyInstallerInstalled = pip show pyinstaller
-if (-not $pyInstallerInstalled) {
+$pyInstallerInstalled = python -m pip show pyinstaller 2>$null
+if ($LASTEXITCODE -ne 0) {
     Write-Host "Installing PyInstaller..."
-    pip install pyinstaller
+    python -m pip install pyinstaller
 }
 
 # Clean up previous builds
@@ -28,7 +32,11 @@ Set-Content -Path "version.txt" -Value $versionContent
 
 # Run PyInstaller with the spec file
 Write-Host "Building executable with PyInstaller..."
-pyinstaller --clean --noconfirm pyinstaller.spec
+python -m PyInstaller --clean --noconfirm pyinstaller.spec
+
+if ($LASTEXITCODE -ne 0) {
+    throw "PyInstaller build failed with exit code $LASTEXITCODE"
+}
 
 # Set the distribution directory
 $distDir = "dist/report_generator_backend"
@@ -37,6 +45,26 @@ $distDir = "dist/report_generator_backend"
 if (-not (Test-Path $distDir)) {
     New-Item -ItemType Directory -Force -Path $distDir | Out-Null
 }
+
+# Ensure the built backend executable is inside the distribution directory
+$builtExeCandidates = @(
+    "dist/report_generator_backend.exe",
+    "dist/report_generator_backend/report_generator_backend.exe"
+)
+
+$builtExe = $null
+foreach ($candidate in $builtExeCandidates) {
+    if (Test-Path $candidate) {
+        $builtExe = $candidate
+        break
+    }
+}
+
+if (-not $builtExe) {
+    throw "Backend executable not found after PyInstaller build. Expected one of: $($builtExeCandidates -join ', ')"
+}
+
+Copy-Item -Path $builtExe -Destination "$distDir/report_generator_backend.exe" -Force
 
 # Function to safely copy directory if it exists
 function Copy-IfExists {
@@ -68,10 +96,10 @@ setlocal
 cd /d "%~dp0"
 
 :: Run the application
-start "" "%~dp0report_generator_backend.exe"
+"%~dp0report_generator_backend.exe"
 "@
 
-Set-Content -Path "$distDir/Run Backend.bat" -Value $runScript -Encoding ASCII
+Set-Content -Path "$distDir/run_backend.bat" -Value $runScript -Encoding ASCII
 
 Write-Host "`nBuild complete! Executable is available in: $((Resolve-Path $distDir).Path)"
-Write-Host "To run the application, execute: 'Run Backend.bat' in the dist directory"
+Write-Host "To run the application, execute: 'run_backend.bat' in the dist directory"
