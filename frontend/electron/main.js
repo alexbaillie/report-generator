@@ -129,9 +129,18 @@ function startBackend() {
 
     const backendExePath = path.join(backendDir, 'report_generator_backend.exe');
     const backendBatPath = path.join(backendDir, 'run_backend.bat');
+    const backendUnixPath = path.join(backendDir, 'report_generator_backend');
 
-    if (!fs.existsSync(backendExePath) && !fs.existsSync(backendBatPath)) {
-      const msg = `Backend launcher not found. Expected: ${backendExePath} or ${backendBatPath}`;
+    const isWindows = process.platform === 'win32';
+
+    const hasWindowsLauncher = fs.existsSync(backendExePath) || fs.existsSync(backendBatPath);
+    const hasUnixLauncher = fs.existsSync(backendUnixPath);
+
+    if ((isWindows && !hasWindowsLauncher) || (!isWindows && !hasUnixLauncher)) {
+      const expected = isWindows
+        ? `${backendExePath} or ${backendBatPath}`
+        : backendUnixPath;
+      const msg = `Backend launcher not found. Expected: ${expected}`;
       logToFile(msg);
       if (mainWindow && !mainWindow.isDestroyed()) {
         showErrorInWindow(msg);
@@ -139,7 +148,24 @@ function startBackend() {
       return;
     }
 
-    if (fs.existsSync(backendExePath)) {
+    if (!isWindows) {
+      try {
+        fs.chmodSync(backendUnixPath, 0o755);
+      } catch (e) {
+        logToFile(`Failed to chmod backend binary (${backendUnixPath}): ${e && e.message ? e.message : String(e)}`);
+      }
+
+      logToFile(`Starting backend binary from: ${backendUnixPath}`);
+      backendProcess = spawn(
+        backendUnixPath,
+        [],
+        {
+          cwd: backendDir,
+          detached: false,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        }
+      );
+    } else if (fs.existsSync(backendExePath)) {
       logToFile(`Starting backend exe from: ${backendExePath}`);
 
       backendProcess = spawn(
@@ -153,7 +179,6 @@ function startBackend() {
         }
       );
     } else {
-      // Fallback: run the batch file via cmd.exe
       const cmdPath = getSystemCommandPath('cmd.exe');
       logToFile(`Starting backend bat from: ${backendBatPath}`);
       logToFile(`Using command processor at: ${cmdPath}`);
