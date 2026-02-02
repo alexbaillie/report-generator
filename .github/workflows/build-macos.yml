@@ -36,9 +36,23 @@ jobs:
         run: |
           pyinstaller --noconfirm pyinstaller.spec
 
-      - name: Verify backend output folder exists
+      - name: Normalize backend output into dist/report_generator_backend
+        shell: bash
         run: |
-          test -d dist/report_generator_backend
+          # PyInstaller spec currently produces a single-file executable named "dist/report_generator_backend"
+          # electron-builder expects a DIRECTORY at "../dist/report_generator_backend" (from frontend/package.json).
+          if [ -f "dist/report_generator_backend" ]; then
+            mv "dist/report_generator_backend" "dist/report_generator_backend.bin"
+            mkdir -p "dist/report_generator_backend"
+            mv "dist/report_generator_backend.bin" "dist/report_generator_backend/report_generator_backend"
+          fi
+
+          if [ ! -d "dist/report_generator_backend" ]; then
+            echo "Expected dist/report_generator_backend directory not found"
+            ls -la dist || true
+            exit 1
+          fi
+
           ls -la dist/report_generator_backend
 
       - name: Install frontend dependencies
