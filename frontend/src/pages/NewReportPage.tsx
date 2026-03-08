@@ -3,9 +3,91 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, Plus } from 'lucide-react';
 import { api } from '../services/api';
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function ensureTableStyling(html: string) {
+  const style = `<style>
+table{border-collapse:collapse;width:100%;}
+th,td{border:1px solid #9ca3af;padding:4px;vertical-align:top;}
+</style>`;
+  const trimmed = (html || '').trim();
+  if (!trimmed) return '';
+  if (trimmed.toLowerCase().includes('<style')) return trimmed;
+  return `${style}${trimmed}`;
+}
+
+function extractFirstTableFromHtml(html: string) {
+  const match = html.match(/<table[\s\S]*?<\/table>/i);
+  return match ? match[0] : '';
+}
+
+function parseDelimitedTextToHtmlTable(text: string) {
+  const raw = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  if (!raw) return '';
+
+  const lines = raw.split('\n').filter(Boolean);
+  const hasTabs = lines.some((l) => l.includes('\t'));
+  const delimiter = hasTabs ? '\t' : ',';
+
+  const rows = lines.map((line) => line.split(delimiter));
+  const maxCols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+  const normalized = rows.map((r) => (r.length < maxCols ? [...r, ...new Array(maxCols - r.length).fill('')] : r));
+
+  const body = normalized
+    .map((cols) => `<tr>${cols.map((c) => `<td>${escapeHtml(String(c ?? '').trim())}</td>`).join('')}</tr>`)
+    .join('');
+
+  return `<table><tbody>${body}</tbody></table>`;
+}
+
+async function parseTableFileToHtml(file: File): Promise<string> {
+  const name = (file.name || '').toLowerCase();
+  const type = (file.type || '').toLowerCase();
+  const text = await file.text();
+
+  if (type.includes('html') || name.endsWith('.html') || name.endsWith('.htm')) {
+    const table = extractFirstTableFromHtml(text);
+    return table || '';
+  }
+
+  if (name.endsWith('.tsv')) {
+    return parseDelimitedTextToHtmlTable(text);
+  }
+
+  if (name.endsWith('.csv') || type.includes('csv')) {
+    return parseDelimitedTextToHtmlTable(text);
+  }
+
+  if (type.startsWith('text/') || name.endsWith('.txt')) {
+    return parseDelimitedTextToHtmlTable(text);
+  }
+
+  return '';
+}
+
+function PreviewTable({ html }: { html: string }) {
+  return (
+    <div className="mt-3">
+      <div className="text-white text-sm mb-2">Preview Table</div>
+      <div
+        className="overflow-auto rounded border border-dark-600 bg-dark-800 p-2 text-gray-100"
+        dangerouslySetInnerHTML={{ __html: ensureTableStyling(html) }}
+      />
+    </div>
+  );
+}
+
 interface TestTableEntry {
   type: string;
   customName: string;
+  tableHtml: string;
   description: string;
   files: File[];
 }
@@ -62,7 +144,7 @@ export default function NewReportPage() {
   const [formData, setFormData] = useState<FormData>({
     title: 'Neuropsychological Assessment',
     template: '',
-    testTableEntries: [{ type: '', customName: '', description: '', files: [] }],
+    testTableEntries: [{ type: '', customName: '', tableHtml: '', description: '', files: [] }],
     templateData: {},
     report_type: 'evaluation',
     template_id: '1',
@@ -231,10 +313,22 @@ export default function NewReportPage() {
     const files = e.target.files;
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
+      let parsedHtml = '';
+      try {
+        parsedHtml = await parseTableFileToHtml(newFiles[newFiles.length - 1]);
+      } catch {
+        parsedHtml = '';
+      }
       setFormData(prev => ({
         ...prev,
         testTableEntries: prev.testTableEntries.map((entry, i) =>
-          i === index ? { ...entry, files: [...entry.files, ...newFiles] } : entry
+          i === index
+            ? {
+              ...entry,
+              files: [...entry.files, ...newFiles],
+              tableHtml: parsedHtml ? ensureTableStyling(parsedHtml) : entry.tableHtml
+            }
+            : entry
         )
       }));
     }
@@ -243,7 +337,7 @@ export default function NewReportPage() {
   const addTestTable = () => {
     setFormData(prev => ({
       ...prev,
-      testTableEntries: [...prev.testTableEntries, { type: '', customName: '', description: '', files: [] }]
+      testTableEntries: [...prev.testTableEntries, { type: '', customName: '', tableHtml: '', description: '', files: [] }]
     }));
   };
 
@@ -255,7 +349,7 @@ export default function NewReportPage() {
 
       // First, handle test tables
       for (const entry of formData.testTableEntries) {
-        if (entry.files.length > 0 || entry.description) {
+        if (entry.files.length > 0 || entry.description || entry.tableHtml) {
           // Generate description for test table
           // For now, just use the description
           const resolvedTestName = entry.type === 'Other'
@@ -264,7 +358,7 @@ export default function NewReportPage() {
           const uploaded = entry.files.length > 0
             ? `Uploaded files: ${entry.files.map(f => f.name).join(', ')}`
             : '';
-          const combined = [entry.description, uploaded].filter(Boolean).join('\n\n');
+          const combined = [entry.tableHtml, entry.description, uploaded].filter(Boolean).join('\n\n');
           generatedSections[`Test Table: ${resolvedTestName}`] = combined;
         }
       }
@@ -453,6 +547,45 @@ export default function NewReportPage() {
                           </div>
                         ) : null}
 
+                        <div className="mb-3">
+                          <label className="text-white text-sm mb-2 block">Paste Table</label>
+                          <div
+                            className="w-full min-h-[120px] rounded border border-dark-600 bg-dark-800 p-2 text-gray-100 overflow-auto"
+                            contentEditable
+                            suppressContentEditableWarning
+                            onPaste={(e) => {
+                              const clipboard = e.clipboardData;
+                              if (!clipboard) return;
+                              const html = clipboard.getData('text/html');
+                              const text = clipboard.getData('text/plain');
+                              const tableFromHtml = html ? extractFirstTableFromHtml(html) : '';
+                              const tableFromText = !tableFromHtml && text ? parseDelimitedTextToHtmlTable(text) : '';
+                              const next = tableFromHtml || tableFromText;
+                              if (next) {
+                                e.preventDefault();
+                                const styled = ensureTableStyling(next);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  testTableEntries: prev.testTableEntries.map((ent, i) =>
+                                    i === index ? { ...ent, tableHtml: styled } : ent
+                                  )
+                                }));
+                              }
+                            }}
+                            onInput={(e) => {
+                              const html = (e.currentTarget as HTMLDivElement).innerHTML;
+                              setFormData(prev => ({
+                                ...prev,
+                                testTableEntries: prev.testTableEntries.map((ent, i) =>
+                                  i === index ? { ...ent, tableHtml: html } : ent
+                                )
+                              }));
+                            }}
+                            dangerouslySetInnerHTML={{ __html: entry.tableHtml || '' }}
+                          ></div>
+                          <div className="text-xs text-gray-400 mt-1">Paste from Excel/Sheets or a table from another document.</div>
+                        </div>
+
                         {entry.files.length > 0 ? (
                           <div className="mb-3 text-sm text-gray-300">
                             {entry.files.map((f, fileIndex) => (
@@ -460,18 +593,22 @@ export default function NewReportPage() {
                             ))}
                           </div>
                         ) : null}
-                        <textarea
-                          className="textarea w-full"
-                          rows={4}
-                          placeholder=""
-                          value={entry.description}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            testTableEntries: prev.testTableEntries.map((ent, i) =>
-                              i === index ? { ...ent, description: e.target.value } : ent
-                            )
-                          }))}
-                        />
+
+                        {entry.tableHtml ? <PreviewTable html={entry.tableHtml} /> : null}
+                        <div className="mt-3">
+                          <label className="text-white text-sm mb-2 block">Notes (optional)</label>
+                          <input
+                            type="text"
+                            className="input w-full"
+                            value={entry.description}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              testTableEntries: prev.testTableEntries.map((ent, i) =>
+                                i === index ? { ...ent, description: e.target.value } : ent
+                              )
+                            }))}
+                          />
+                        </div>
                       </div>
                     ))}
                     <button
@@ -505,6 +642,7 @@ export default function NewReportPage() {
                         }))}
                       />
                     )}
+
                     {/* Other - specify textbox when 'Other' is selected */}
                     {Array.isArray(field.options) && field.options.includes('Other') && (() => {
                       const val = formData.templateData?.[section.title]?.[field.label];
