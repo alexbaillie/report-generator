@@ -5,6 +5,7 @@ import { api } from '../services/api';
 
 interface TestTableEntry {
   type: string;
+  customName: string;
   description: string;
   files: File[];
 }
@@ -61,7 +62,7 @@ export default function NewReportPage() {
   const [formData, setFormData] = useState<FormData>({
     title: 'Neuropsychological Assessment',
     template: '',
-    testTableEntries: [{ type: '', description: '', files: [] }],
+    testTableEntries: [{ type: '', customName: '', description: '', files: [] }],
     templateData: {},
     report_type: 'evaluation',
     template_id: '1',
@@ -242,7 +243,7 @@ export default function NewReportPage() {
   const addTestTable = () => {
     setFormData(prev => ({
       ...prev,
-      testTableEntries: [...prev.testTableEntries, { type: '', description: '', files: [] }]
+      testTableEntries: [...prev.testTableEntries, { type: '', customName: '', description: '', files: [] }]
     }));
   };
 
@@ -257,11 +258,14 @@ export default function NewReportPage() {
         if (entry.files.length > 0 || entry.description) {
           // Generate description for test table
           // For now, just use the description
+          const resolvedTestName = entry.type === 'Other'
+            ? (entry.customName || 'Other')
+            : entry.type;
           const uploaded = entry.files.length > 0
             ? `Uploaded files: ${entry.files.map(f => f.name).join(', ')}`
             : '';
           const combined = [entry.description, uploaded].filter(Boolean).join('\n\n');
-          generatedSections[`Test Table: ${entry.type}`] = combined;
+          generatedSections[`Test Table: ${resolvedTestName}`] = combined;
         }
       }
 
@@ -355,7 +359,13 @@ export default function NewReportPage() {
                             onChange={(e) => setFormData(prev => ({
                               ...prev,
                               testTableEntries: prev.testTableEntries.map((ent, i) =>
-                                i === index ? { ...ent, type: e.target.value } : ent
+                                i === index
+                                  ? {
+                                    ...ent,
+                                    type: e.target.value,
+                                    customName: e.target.value === 'Other' ? ent.customName : ''
+                                  }
+                                  : ent
                               )
                             }))}
                           >
@@ -408,6 +418,7 @@ export default function NewReportPage() {
                             <option>WRAML-2</option>
                             <option>WRAML-3</option>
                             <option>WSR-II</option>
+                            <option value="Other">Other</option>
                           </select>
                           <button
                             type="button"
@@ -424,6 +435,31 @@ export default function NewReportPage() {
                             multiple
                           />
                         </div>
+
+                        {entry.type === 'Other' ? (
+                          <div className="mb-3">
+                            <label className="text-white text-sm mb-2 block">Test Name</label>
+                            <input
+                              type="text"
+                              className="input w-full"
+                              value={entry.customName}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                testTableEntries: prev.testTableEntries.map((ent, i) =>
+                                  i === index ? { ...ent, customName: e.target.value } : ent
+                                )
+                              }))}
+                            />
+                          </div>
+                        ) : null}
+
+                        {entry.files.length > 0 ? (
+                          <div className="mb-3 text-sm text-gray-300">
+                            {entry.files.map((f, fileIndex) => (
+                              <div key={`${f.name}-${fileIndex}`}>{f.name}</div>
+                            ))}
+                          </div>
+                        ) : null}
                         <textarea
                           className="textarea w-full"
                           rows={4}
