@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Save, Upload, Feather, Loader2 } from 'lucide-react';
+import axios from 'axios';
 import { api } from '../services/api';
 
 interface Template {
@@ -17,6 +18,7 @@ export default function EditorPage() {
   const [searchTemplate, setSearchTemplate] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -95,22 +97,63 @@ export default function EditorPage() {
 
   // Handle AI prompt submission
   const handleAiSubmit = async () => {
-    if (!aiPrompt.trim() || isGenerating) return;
+    console.log('[EditorPage] Generate Report with AI clicked');
+    setAiError(null);
+
+    if (isGenerating) return;
+
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      setAiError('Please enter an AI prompt (or click a suggestion prompt) before generating.');
+      return;
+    }
 
     setIsGenerating(true);
     try {
       // Call AI API with current content and prompt
+      console.log('[EditorPage] Sending AI request to /api/ai/generate-text', {
+        prompt,
+        contextLength: content.length,
+      });
+
       const response = await api.generateText({
-        prompt: aiPrompt,
+        prompt,
         context: content,
       });
 
+      console.log('[EditorPage] AI response received', response);
+
+      const generatedText =
+        (response && typeof response === 'object' && 'text' in response) ? (response as any).text : response;
+
+      if (!generatedText || typeof generatedText !== 'string') {
+        throw new Error('AI response was not in the expected format.');
+      }
+
       // Replace content with AI-generated text
-      setContent(response.text);
+      setContent(generatedText);
       setAiPrompt('');
     } catch (error) {
-      console.error('Error generating text:', error);
-      alert('Failed to generate text. Please try again.');
+      console.error('[EditorPage] Error generating text:', error);
+      if (axios.isAxiosError(error)) {
+        // Axios uses "Network Error" when the server is unreachable / connection refused.
+        if (!error.response) {
+          setAiError('Cannot reach the backend at http://127.0.0.1:8000. Make sure the backend is running, then try again.');
+          return;
+        }
+
+        const detail = (error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data)
+          ? (error.response.data as any).detail
+          : null;
+
+        setAiError(detail || `Backend request failed (${error.response.status}). Please try again.`);
+        return;
+      }
+
+      const msg = error instanceof Error
+        ? error.message
+        : 'Failed to generate text. Please try again.';
+      setAiError(msg);
     } finally {
       setIsGenerating(false);
     }
@@ -208,7 +251,12 @@ export default function EditorPage() {
             <button className="p-2 hover:bg-dark-700 rounded transition-colors">
               <Upload size={20} className="text-gray-400" />
             </button>
-            <button className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium transition-colors">
+            <button
+              onClick={handleAiSubmit}
+              disabled={isGenerating}
+              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {isGenerating ? <Loader2 className="animate-spin" size={16} /> : null}
               Generate Report with AI
             </button>
           </div>
@@ -217,6 +265,11 @@ export default function EditorPage() {
         {/* Editor */}
         <div className="flex-1 p-8 overflow-y-auto">
           <div className="max-w-4xl mx-auto bg-white rounded shadow-lg min-h-full p-12">
+            {aiError ? (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {aiError}
+              </div>
+            ) : null}
             <textarea
               ref={textareaRef}
               value={content}

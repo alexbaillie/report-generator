@@ -17,9 +17,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     # Allow all origins during development to avoid CORS issues from different dev servers/electron
-    allow_origins=["*", "null"],  # include "null" for file:// origins
-    allow_origin_regex=".*",      # match any origin including custom/electron
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
