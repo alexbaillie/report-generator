@@ -251,14 +251,6 @@ export default function EditorPage() {
             <button className="p-2 hover:bg-dark-700 rounded transition-colors">
               <Upload size={20} className="text-gray-400" />
             </button>
-            <button
-              onClick={handleAiSubmit}
-              disabled={isGenerating}
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
-            >
-              {isGenerating ? <Loader2 className="animate-spin" size={16} /> : null}
-              Generate Report with AI
-            </button>
           </div>
         </div>
 
