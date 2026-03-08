@@ -131,7 +131,26 @@ export default function EditorPage() {
       }
 
       // Replace content with AI-generated text
-      setContent(generatedText);
+      const textarea = textareaRef.current;
+      const insertPos = textarea ? textarea.selectionStart : content.length;
+
+      setContent((prev) => {
+        const safePos = Math.max(0, Math.min(insertPos, prev.length));
+        const prefix = prev.slice(0, safePos);
+        const suffix = prev.slice(safePos);
+        const needsLeadingNewlines = prefix.length > 0 && !prefix.endsWith('\n');
+        const leading = needsLeadingNewlines ? '\n\n' : (prefix.length > 0 ? '\n\n' : '');
+        const trailing = suffix.length > 0 ? '\n\n' : '';
+        return `${prefix}${leading}${generatedText}${trailing}${suffix}`;
+      });
+
+      if (textarea) {
+        setTimeout(() => {
+          const newPos = insertPos + generatedText.length + 2;
+          textarea.setSelectionRange(newPos, newPos);
+          textarea.focus();
+        }, 0);
+      }
       setAiPrompt('');
     } catch (error) {
       console.error('[EditorPage] Error generating text:', error);
