@@ -251,16 +251,20 @@ export default function NewReportPage() {
     try {
       // Generate report section by section
       const generatedSections: Record<string, string> = {};
-      
+
       // First, handle test tables
       for (const entry of formData.testTableEntries) {
         if (entry.files.length > 0 || entry.description) {
           // Generate description for test table
           // For now, just use the description
-          generatedSections[`Test Table: ${entry.type}`] = entry.description;
+          const uploaded = entry.files.length > 0
+            ? `Uploaded files: ${entry.files.map(f => f.name).join(', ')}`
+            : '';
+          const combined = [entry.description, uploaded].filter(Boolean).join('\n\n');
+          generatedSections[`Test Table: ${entry.type}`] = combined;
         }
       }
-      
+
       // Generate content for each template section
       for (const section of templateSections) {
         const sectionData = formData.templateData?.[section.title] || {};
@@ -283,8 +287,8 @@ export default function NewReportPage() {
           generatedSections[section.title] = response.section_content;
         }
       }
-      
-// Save the report to database
+
+      // Save the report to database
       const reportData = {
         title: formData.title,
         patient_name: 'Patient Name', // TODO: Add patient name field
@@ -309,7 +313,7 @@ export default function NewReportPage() {
     }
   };
 
-
+  const isTestsAdministeredSection = (title: string) => title.trim().toLowerCase() === 'tests administered';
 
   return (
     <div className="p-8">
@@ -331,116 +335,119 @@ export default function NewReportPage() {
             </select>
           </div>
 
-          {/* Upload test table or type/paste (moved up as requested) */}
-          <div>
-            <label className="text-white text-lg mb-3 block">Upload test table or type/paste</label>
-            {formData.testTableEntries.map((entry, index) => (
-              <div key={index} className="mb-6 p-4 border border-dark-600 rounded">
-                <div className="flex items-start gap-3 mb-3">
-                  <select
-                    className="input flex-1 max-w-md"
-                    value={entry.type}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      testTableEntries: prev.testTableEntries.map((ent, i) =>
-                        i === index ? { ...ent, type: e.target.value } : ent
-                      )
-                    }))}
-                  >
-                    <option value="">Select test table</option>
-                    <option>ADOS-2</option>
-                    <option>ABAS-III</option>
-                    <option>Aseba</option>
-                    <option>ASRS 1.1</option>
-                    <option>Beck Youth Inventory</option>
-                    <option>Bayley-4</option>
-                    <option>Beck Youth Inventory-2</option>
-                    <option>Beery VMI-6</option>
-                    <option>Bracken-III</option>
-                    <option>Bracken-IV</option>
-                    <option>Brief</option>
-                    <option>CDI-2</option>
-                    <option>Children's Colour Trails Test</option>
-                    <option>C-TOPP-2</option>
-                    <option>CVLT-C</option>
-                    <option>DABS</option>
-                    <option>DAS-II</option>
-                    <option>DKEFS</option>
-                    <option>EVT-2</option>
-                    <option>GORT</option>
-                    <option>Leiter</option>
-                    <option>MASC</option>
-                    <option>Movement ABC-2</option>
-                    <option>Mullen (version 1)</option>
-                    <option>NEPSY-II</option>
-                    <option>PAI</option>
-                    <option>PPVT-4</option>
-                    <option>REEL-4</option>
-                    <option>Rey Complex Figure Test-1</option>
-                    <option>Scared</option>
-                    <option>SCQ</option>
-                    <option>Sensory Profiles-2</option>
-                    <option>SIB-r</option>
-                    <option>SLDT-E:NU</option>
-                    <option>TOPS</option>
-                    <option>TOWL-4</option>
-                    <option>TVCF-1</option>
-                    <option>Vineland-3</option>
-                    <option>WAIS-IV</option>
-                    <option>WASI-II</option>
-                    <option>WIAT-II</option>
-                    <option>WIAT-IV</option>
-                    <option>WISC-V</option>
-                    <option>Woodcock-Johnson-IV</option>
-                    <option>WPPSI-IV</option>
-                    <option>WRAML-2</option>
-                    <option>WRAML-3</option>
-                    <option>WSR-II</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
-                    onClick={() => document.getElementById(`test-upload-${index}`)?.click()}
-                  >
-                    <Upload size={24} className="text-gray-300" />
-                  </button>
-                  <input
-                    id={`test-upload-${index}`}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileUpload(index)}
-                    multiple
-                  />
-                </div>
-                <textarea
-                  className="textarea w-full"
-                  rows={4}
-                  placeholder=""
-                  value={entry.description}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    testTableEntries: prev.testTableEntries.map((ent, i) =>
-                      i === index ? { ...ent, description: e.target.value } : ent
-                    )
-                  }))}
-                />
-              </div>
-            ))}
-            <button
-              type="button"
-              className="bg-dark-700 hover:bg-dark-600 text-gray-100 px-4 py-2 rounded flex items-center gap-2"
-              onClick={addTestTable}
-            >
-              <Plus size={20} />
-              Upload another test table
-            </button>
-          </div>
-
           {/* Dynamic Template Form */}
           {templateSections.map((section, sectionIndex) => (
             <div key={sectionIndex} className="mb-6">
-              <h3 className="text-white text-lg mb-3 block">{section.title}</h3>
+              <h3 className="text-white text-lg mb-3 block">
+                {isTestsAdministeredSection(section.title)
+                  ? 'Tests Administered (Upload or Paste Score Tables)'
+                  : section.title}
+              </h3>
               <div className="space-y-4">
+                {isTestsAdministeredSection(section.title) ? (
+                  <div>
+                    {formData.testTableEntries.map((entry, index) => (
+                      <div key={index} className="mb-6 p-4 border border-dark-600 rounded">
+                        <div className="flex items-start gap-3 mb-3">
+                          <select
+                            className="input flex-1 max-w-md"
+                            value={entry.type}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              testTableEntries: prev.testTableEntries.map((ent, i) =>
+                                i === index ? { ...ent, type: e.target.value } : ent
+                              )
+                            }))}
+                          >
+                            <option value="">Select test table</option>
+                            <option>ADOS-2</option>
+                            <option>ABAS-III</option>
+                            <option>Aseba</option>
+                            <option>ASRS 1.1</option>
+                            <option>Beck Youth Inventory</option>
+                            <option>Bayley-4</option>
+                            <option>Beck Youth Inventory-2</option>
+                            <option>Beery VMI-6</option>
+                            <option>Bracken-III</option>
+                            <option>Bracken-IV</option>
+                            <option>Brief</option>
+                            <option>CDI-2</option>
+                            <option>Children's Colour Trails Test</option>
+                            <option>C-TOPP-2</option>
+                            <option>CVLT-C</option>
+                            <option>DABS</option>
+                            <option>DAS-II</option>
+                            <option>DKEFS</option>
+                            <option>EVT-2</option>
+                            <option>GORT</option>
+                            <option>Leiter</option>
+                            <option>MASC</option>
+                            <option>Movement ABC-2</option>
+                            <option>Mullen (version 1)</option>
+                            <option>NEPSY-II</option>
+                            <option>PAI</option>
+                            <option>PPVT-4</option>
+                            <option>REEL-4</option>
+                            <option>Rey Complex Figure Test-1</option>
+                            <option>Scared</option>
+                            <option>SCQ</option>
+                            <option>Sensory Profiles-2</option>
+                            <option>SIB-r</option>
+                            <option>SLDT-E:NU</option>
+                            <option>TOPS</option>
+                            <option>TOWL-4</option>
+                            <option>TVCF-1</option>
+                            <option>Vineland-3</option>
+                            <option>WAIS-IV</option>
+                            <option>WASI-II</option>
+                            <option>WIAT-II</option>
+                            <option>WIAT-IV</option>
+                            <option>WISC-V</option>
+                            <option>Woodcock-Johnson-IV</option>
+                            <option>WPPSI-IV</option>
+                            <option>WRAML-2</option>
+                            <option>WRAML-3</option>
+                            <option>WSR-II</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                            onClick={() => document.getElementById(`test-upload-${index}`)?.click()}
+                          >
+                            <Upload size={24} className="text-gray-300" />
+                          </button>
+                          <input
+                            id={`test-upload-${index}`}
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileUpload(index)}
+                            multiple
+                          />
+                        </div>
+                        <textarea
+                          className="textarea w-full"
+                          rows={4}
+                          placeholder=""
+                          value={entry.description}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            testTableEntries: prev.testTableEntries.map((ent, i) =>
+                              i === index ? { ...ent, description: e.target.value } : ent
+                            )
+                          }))}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="bg-dark-700 hover:bg-dark-600 text-gray-100 px-4 py-2 rounded flex items-center gap-2"
+                      onClick={addTestTable}
+                    >
+                      <Plus size={20} />
+                      Upload another test table
+                    </button>
+                  </div>
+                ) : null}
                 {section.fields.map((field, fieldIndex) => (
                   <div key={fieldIndex}>
                     <label className="text-white text-sm mb-2 block">{field.label}</label>
@@ -806,7 +813,7 @@ export default function NewReportPage() {
                         multiple
                       />
                     )}
-                    {field.type === 'table' && (
+                    {field.type === 'table' && !isTestsAdministeredSection(section.title) && (
                       <textarea
                         className="textarea w-full"
                         rows={4}
