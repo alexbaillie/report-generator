@@ -412,11 +412,19 @@ export default function NewReportPage() {
   };
 
   const isTestsAdministeredSection = (title: string) => title.trim().toLowerCase() === 'tests administered';
+  const isDemographicsSection = (title: string) => title.trim().toLowerCase().includes('demographic');
+  const isFamilyHistorySection = (title: string) => title.trim().toLowerCase().includes('family history');
+  const LANGUAGES_AT_HOME_KEY = 'Languages at home';
+  const isLanguagesAtHomeFieldLabel = (label: string) => {
+    const normalized = label.trim().toLowerCase();
+    return normalized === 'languages spoken at home' || normalized === 'languages at home';
+  };
 
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         <div className="space-y-6">
+
           <div>
             <label className="text-white text-lg mb-3 block">Choose template</label>
             <select
@@ -621,392 +629,403 @@ export default function NewReportPage() {
                     </button>
                   </div>
                 ) : null}
-                {section.fields.map((field, fieldIndex) => (
-                  <div key={fieldIndex}>
-                    <label className="text-white text-sm mb-2 block">{field.label}</label>
-                    {field.type === 'text' && (
-                      <input
-                        type="text"
-                        className="input w-full"
-                        readOnly={field.label === 'Age at assessment'}
-                        value={formData.templateData?.[section.title]?.[field.label] || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: e.target.value
-                            }
+                {(isDemographicsSection(section.title) || isFamilyHistorySection(section.title)) && !section.fields.some((f) => isLanguagesAtHomeFieldLabel(f.label)) ? (
+                  <div>
+                    <label className="text-white text-sm mb-2 block">{LANGUAGES_AT_HOME_KEY}</label>
+                    <input
+                      type="text"
+                      className="input w-full"
+                      value={formData.templateData?.[section.title]?.[LANGUAGES_AT_HOME_KEY] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        templateData: {
+                          ...prev.templateData,
+                          [section.title]: {
+                            ...prev.templateData?.[section.title],
+                            [LANGUAGES_AT_HOME_KEY]: e.target.value
                           }
-                        }))}
-                      />
-                    )}
+                        }
+                      }))}
+                    />
+                  </div>
+                ) : null}
+                {section.fields.map((field, fieldIndex) => {
+                  const forceLanguagesAtHomeText = isLanguagesAtHomeFieldLabel(field.label);
+                  return (
+                    <div key={fieldIndex}>
+                      <label className="text-white text-sm mb-2 block">{field.label}</label>
 
-                    {/* Other - specify textbox when 'Other' is selected */}
-                    {Array.isArray(field.options) && field.options.includes('Other') && (() => {
-                      const val = formData.templateData?.[section.title]?.[field.label];
-                      const selectedValues: string[] = Array.isArray(val) ? val : (val ? [val] : []);
-                      if (selectedValues.includes('Other')) {
-                        const otherKey = `${field.label} - Other (specify)`;
-                        return (
-                          <input
-                            type="text"
-                            className="input w-full mt-2"
-                            placeholder="Please specify"
-                            value={formData.templateData?.[section.title]?.[otherKey] || ''}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              templateData: {
-                                ...prev.templateData,
-                                [section.title]: {
-                                  ...prev.templateData?.[section.title],
-                                  [otherKey]: e.target.value
+                      {forceLanguagesAtHomeText ? (
+                        <input
+                          type="text"
+                          className="input w-full"
+                          value={
+                            formData.templateData?.[section.title]?.[LANGUAGES_AT_HOME_KEY] ||
+                            formData.templateData?.[section.title]?.[field.label] ||
+                            ''
+                          }
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [LANGUAGES_AT_HOME_KEY]: e.target.value,
+                                [field.label]: e.target.value
+                              }
+                            }
+                          }))}
+                        />
+                      ) : null}
+
+                      {!forceLanguagesAtHomeText && field.type === 'text' && (
+                        <input
+                          type="text"
+                          className="input w-full"
+                          readOnly={field.label === 'Age at assessment'}
+                          value={formData.templateData?.[section.title]?.[field.label] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: e.target.value
+                              }
+                            }
+                          }))}
+                        />
+                      )}
+                      {/* Other - specify textbox when 'Other' is selected */}
+                      {Array.isArray(field.options) && field.options.includes('Other') && (() => {
+                        const val = formData.templateData?.[section.title]?.[field.label];
+                        const selectedValues: string[] = Array.isArray(val) ? val : (val ? [val] : []);
+                        if (selectedValues.includes('Other')) {
+                          const otherKey = `${field.label} - Other (specify)`;
+                          return (
+                            <input
+                              type="text"
+                              className="input w-full mt-2"
+                              placeholder="Please specify"
+                              value={formData.templateData?.[section.title]?.[otherKey] || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                templateData: {
+                                  ...prev.templateData,
+                                  [section.title]: {
+                                    ...prev.templateData?.[section.title],
+                                    [otherKey]: e.target.value
+                                  }
+                                }
+                              }))}
+                            />
+                          );
+                        }
+                        return null;
+                      })()}
+                      {!forceLanguagesAtHomeText && field.type === 'textarea' && (
+                        <textarea
+                          className="textarea w-full"
+                          rows={3}
+                          value={formData.templateData?.[section.title]?.[field.label] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: e.target.value
+                              }
+                            }
+                          }))}
+                        />
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'date' && (
+                        <input
+                          type="date"
+                          className="input w-44"
+                          value={formData.templateData?.[section.title]?.[field.label] || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData(prev => {
+                              const next = {
+                                ...prev,
+                                templateData: {
+                                  ...prev.templateData,
+                                  [section.title]: {
+                                    ...prev.templateData?.[section.title],
+                                    [field.label]: value
+                                  }
+                                }
+                              } as FormData;
+                              // Auto-calc Age at assessment when DOB changes
+                              if (field.label.toLowerCase() === 'date of birth') {
+                                const dob = new Date(value);
+                                let refDateStr = prev.templateData?.[section.title]?.['Date(s) of assessment'];
+                                let refDate: Date | null = null;
+                                if (Array.isArray(refDateStr) && refDateStr.length > 0) {
+                                  refDate = new Date(refDateStr[0]);
+                                } else if (typeof refDateStr === 'string' && refDateStr) {
+                                  refDate = new Date(refDateStr);
+                                } else {
+                                  refDate = new Date();
+                                }
+                                if (!isNaN(dob.getTime()) && refDate && !isNaN(refDate.getTime())) {
+                                  let age = refDate.getFullYear() - dob.getFullYear();
+                                  const m = refDate.getMonth() - dob.getMonth();
+                                  if (m < 0 || (m === 0 && refDate.getDate() < dob.getDate())) age--;
+                                  next.templateData[section.title]['Age at assessment'] = `${age}`;
                                 }
                               }
-                            }))}
-                          />
-                        );
-                      }
-                      return null;
-                    })()}
-
-                    {/* Presenting Concerns: per-domain notes */}
-                    {section.title === 'Presenting Concerns' && field.label === 'Domains' && (
-                      (() => {
-                        const selected: string[] = formData.templateData?.[section.title]?.[field.label] || [];
-                        const notesKey = 'Domain Notes';
-                        return (
-                          <div className="mt-3 space-y-3">
-                            {selected.map((domain) => (
-                              <div key={domain}>
-                                <label className="block text-sm text-gray-300 mb-1">{domain} notes</label>
-                                <textarea
-                                  className="textarea w-full"
-                                  rows={3}
-                                  value={formData.templateData?.[section.title]?.[notesKey]?.[domain] || ''}
-                                  onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    templateData: {
-                                      ...prev.templateData,
-                                      [section.title]: {
-                                        ...prev.templateData?.[section.title],
-                                        [notesKey]: {
-                                          ...(prev.templateData?.[section.title]?.[notesKey] || {}),
-                                          [domain]: e.target.value
+                              return next;
+                            });
+                          }}
+                        />
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'date_multi' && (
+                        <div className="space-y-2">
+                          <div className="flex gap-2 items-center flex-wrap">
+                            {(
+                              Array.isArray(formData.templateData?.[section.title]?.[field.label])
+                                ? formData.templateData?.[section.title]?.[field.label]
+                                : (formData.templateData?.[section.title]?.[field.label]
+                                    ? String(formData.templateData?.[section.title]?.[field.label]).split(',').map(s => s.trim()).filter(Boolean)
+                                    : [])
+                            ).map((d: string, i: number) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <input
+                                  type="date"
+                                  className="input w-44"
+                                  value={d}
+                                  onChange={(e) => setFormData(prev => {
+                                    const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
+                                      ? [...prev.templateData?.[section.title]?.[field.label]]
+                                      : [];
+                                    arr[i] = e.target.value;
+                                    return {
+                                      ...prev,
+                                      templateData: {
+                                        ...prev.templateData,
+                                        [section.title]: {
+                                          ...prev.templateData?.[section.title],
+                                          [field.label]: arr
                                         }
                                       }
-                                    }
-                                  }))}
+                                    };
+                                  })}
                                 />
+                                <button
+                                  type="button"
+                                  className="px-2 py-1 text-xs bg-dark-700 rounded"
+                                  onClick={() => setFormData(prev => {
+                                    const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
+                                      ? [...prev.templateData?.[section.title]?.[field.label]]
+                                      : [];
+                                    arr.splice(i, 1);
+                                    return {
+                                      ...prev,
+                                      templateData: {
+                                        ...prev.templateData,
+                                        [section.title]: {
+                                          ...prev.templateData?.[section.title],
+                                          [field.label]: arr
+                                        }
+                                      }
+                                    };
+                                  })}
+                                >Remove</button>
                               </div>
                             ))}
                           </div>
-                        );
-                      })()
-                    )}
-                    {field.type === 'textarea' && (
-                      <textarea
-                        className="textarea w-full"
-                        rows={3}
-                        value={formData.templateData?.[section.title]?.[field.label] || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: e.target.value
-                            }
-                          }
-                        }))}
-                      />
-                    )}
-                    {field.type === 'date' && (
-                      <input
-                        type="date"
-                        className="input w-44"
-                        value={formData.templateData?.[section.title]?.[field.label] || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFormData(prev => {
-                            const next = {
-                              ...prev,
-                              templateData: {
-                                ...prev.templateData,
-                                [section.title]: {
-                                  ...prev.templateData?.[section.title],
-                                  [field.label]: value
-                                }
-                              }
-                            } as FormData;
-                            // Auto-calc Age at assessment when DOB changes
-                            if (field.label.toLowerCase() === 'date of birth') {
-                              const dob = new Date(value);
-                              let refDateStr = prev.templateData?.[section.title]?.['Date(s) of assessment'];
-                              let refDate: Date | null = null;
-                              if (Array.isArray(refDateStr) && refDateStr.length > 0) {
-                                refDate = new Date(refDateStr[0]);
-                              } else if (typeof refDateStr === 'string' && refDateStr) {
-                                refDate = new Date(refDateStr);
-                              } else {
-                                refDate = new Date();
-                              }
-                              if (!isNaN(dob.getTime()) && refDate && !isNaN(refDate.getTime())) {
-                                let age = refDate.getFullYear() - dob.getFullYear();
-                                const m = refDate.getMonth() - dob.getMonth();
-                                if (m < 0 || (m === 0 && refDate.getDate() < dob.getDate())) age--;
-                                next.templateData[section.title]['Age at assessment'] = `${age}`;
-                              }
-                            }
-                            return next;
-                          });
-                        }}
-                      />
-                    )}
-                    {field.type === 'date_multi' && (
-                      <div className="space-y-2">
-                        <div className="flex gap-2 items-center flex-wrap">
-                          {(
-                            Array.isArray(formData.templateData?.[section.title]?.[field.label])
-                              ? formData.templateData?.[section.title]?.[field.label]
-                              : (formData.templateData?.[section.title]?.[field.label]
-                                  ? String(formData.templateData?.[section.title]?.[field.label]).split(',').map(s => s.trim()).filter(Boolean)
-                                  : [])
-                          ).map((d: string, i: number) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <input
-                                type="date"
-                                className="input w-44"
-                                value={d}
-                                onChange={(e) => setFormData(prev => {
-                                  const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
-                                    ? [...prev.templateData?.[section.title]?.[field.label]]
-                                    : [];
-                                  arr[i] = e.target.value;
-                                  return {
-                                    ...prev,
-                                    templateData: {
-                                      ...prev.templateData,
-                                      [section.title]: {
-                                        ...prev.templateData?.[section.title],
-                                        [field.label]: arr
-                                      }
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="px-3 py-1 text-sm bg-dark-700 rounded"
+                              onClick={() => setFormData(prev => {
+                                const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
+                                  ? [...prev.templateData?.[section.title]?.[field.label]]
+                                  : [];
+                                arr.push('');
+                                return {
+                                  ...prev,
+                                  templateData: {
+                                    ...prev.templateData,
+                                    [section.title]: {
+                                      ...prev.templateData?.[section.title],
+                                      [field.label]: arr
                                     }
-                                  };
-                                })}
-                              />
-                              <button
-                                type="button"
-                                className="px-2 py-1 text-xs bg-dark-700 rounded"
-                                onClick={() => setFormData(prev => {
-                                  const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
-                                    ? [...prev.templateData?.[section.title]?.[field.label]]
-                                    : [];
-                                  arr.splice(i, 1);
-                                  return {
-                                    ...prev,
-                                    templateData: {
-                                      ...prev.templateData,
-                                      [section.title]: {
-                                        ...prev.templateData?.[section.title],
-                                        [field.label]: arr
-                                      }
+                                  }
+                                };
+                              })}
+                            >Add date</button>
+                            <button
+                              type="button"
+                              className="px-3 py-1 text-sm bg-dark-700 rounded"
+                              onClick={() => setFormData(prev => {
+                                const today = new Date();
+                                const yyyy = today.getFullYear();
+                                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                                const dd = String(today.getDate()).padStart(2, '0');
+                                const val = `${yyyy}-${mm}-${dd}`;
+                                const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
+                                  ? [...prev.templateData?.[section.title]?.[field.label]]
+                                  : [];
+                                arr.push(val);
+                                return {
+                                  ...prev,
+                                  templateData: {
+                                    ...prev.templateData,
+                                    [section.title]: {
+                                      ...prev.templateData?.[section.title],
+                                      [field.label]: arr
                                     }
-                                  };
-                                })}
-                              >Remove</button>
-                            </div>
+                                  }
+                                };
+                              })}
+                            >Add today</button>
+                          </div>
+                        </div>
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'select' && (
+                        <select
+                          className="input w-full"
+                          value={formData.templateData?.[section.title]?.[field.label] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: e.target.value
+                              }
+                            }
+                          }))}
+                        >
+                          <option value="">Select</option>
+                          {(field.options || []).map((opt, i) => (
+                            <option key={i} value={opt}>{opt}</option>
                           ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="px-3 py-1 text-sm bg-dark-700 rounded"
-                            onClick={() => setFormData(prev => {
-                              const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
-                                ? [...prev.templateData?.[section.title]?.[field.label]]
-                                : [];
-                              arr.push('');
-                              return {
-                                ...prev,
-                                templateData: {
-                                  ...prev.templateData,
-                                  [section.title]: {
-                                    ...prev.templateData?.[section.title],
-                                    [field.label]: arr
-                                  }
-                                }
-                              };
-                            })}
-                          >Add date</button>
-                          <button
-                            type="button"
-                            className="px-3 py-1 text-sm bg-dark-700 rounded"
-                            onClick={() => setFormData(prev => {
-                              const today = new Date();
-                              const yyyy = today.getFullYear();
-                              const mm = String(today.getMonth() + 1).padStart(2, '0');
-                              const dd = String(today.getDate()).padStart(2, '0');
-                              const val = `${yyyy}-${mm}-${dd}`;
-                              const arr: string[] = Array.isArray(prev.templateData?.[section.title]?.[field.label])
-                                ? [...prev.templateData?.[section.title]?.[field.label]]
-                                : [];
-                              arr.push(val);
-                              return {
-                                ...prev,
-                                templateData: {
-                                  ...prev.templateData,
-                                  [section.title]: {
-                                    ...prev.templateData?.[section.title],
-                                    [field.label]: arr
-                                  }
-                                }
-                              };
-                            })}
-                          >Add today</button>
-                        </div>
-                      </div>
-                    )}
-                    {field.type === 'select' && (
-                      <select
-                        className="input w-full"
-                        value={formData.templateData?.[section.title]?.[field.label] || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: e.target.value
-                            }
-                          }
-                        }))}
-                      >
-                        <option value="">Select</option>
-                        {(field.options || []).map((opt, i) => (
-                          <option key={i} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    )}
-                    {field.type === 'multi_select' && (
-                      <div className="max-h-40 overflow-y-auto border border-dark-700 rounded p-2">
-                        {(field.options || []).map((opt, i) => {
-                          const selected: string[] = formData.templateData?.[section.title]?.[field.label] || [];
-                          const checked = selected.includes(opt);
-                          return (
-                            <label key={i} className="flex items-center gap-2 py-1">
-                              <input
-                                type="checkbox"
-                                className="checkbox"
-                                checked={checked}
-                                onChange={(e) => {
-                                  const next = new Set<string>(selected);
-                                  if ((e.target as HTMLInputElement).checked) next.add(opt); else next.delete(opt);
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    templateData: {
-                                      ...prev.templateData,
-                                      [section.title]: {
-                                        ...prev.templateData?.[section.title],
-                                        [field.label]: Array.from(next)
+                        </select>
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'multi_select' && (
+                        <div className="max-h-40 overflow-y-auto border border-dark-700 rounded p-2">
+                          {(field.options || []).map((opt, i) => {
+                            const selected: string[] = formData.templateData?.[section.title]?.[field.label] || [];
+                            const checked = selected.includes(opt);
+                            return (
+                              <label key={i} className="flex items-center gap-2 py-1">
+                                <input
+                                  type="checkbox"
+                                  className="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const next = new Set<string>(selected);
+                                    if ((e.target as HTMLInputElement).checked) next.add(opt); else next.delete(opt);
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      templateData: {
+                                        ...prev.templateData,
+                                        [section.title]: {
+                                          ...prev.templateData?.[section.title],
+                                          [field.label]: Array.from(next)
+                                        }
                                       }
-                                    }
-                                  }));
-                                }}
-                              />
-                              <span className="text-gray-200 text-sm">{opt}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {field.type === 'checkbox' && (
-                      <input
-                        type="checkbox"
-                        className="checkbox"
-                        checked={!!formData.templateData?.[section.title]?.[field.label]}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: (e.target as HTMLInputElement).checked
+                                    }));
+                                  }}
+                                />
+                                <span className="text-gray-200 text-sm">{opt}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'checkbox' && (
+                        <input
+                          type="checkbox"
+                          className="checkbox"
+                          checked={!!formData.templateData?.[section.title]?.[field.label]}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: (e.target as HTMLInputElement).checked
+                              }
                             }
-                          }
-                        }))}
-                      />
-                    )}
-                    {field.type === 'checkboxes' && (
-                      <div className="max-h-40 overflow-y-auto border border-dark-700 rounded p-2">
-                        {(field.options || []).map((opt, i) => {
-                          const selected: string[] = formData.templateData?.[section.title]?.[field.label] || [];
-                          const checked = selected.includes(opt);
-                          return (
-                            <label key={i} className="flex items-center gap-2 py-1">
-                              <input
-                                type="checkbox"
-                                className="checkbox"
-                                checked={checked}
-                                onChange={(e) => {
-                                  const next = new Set<string>(selected);
-                                  if ((e.target as HTMLInputElement).checked) next.add(opt); else next.delete(opt);
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    templateData: {
-                                      ...prev.templateData,
-                                      [section.title]: {
-                                        ...prev.templateData?.[section.title],
-                                        [field.label]: Array.from(next)
+                          }))}
+                        />
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'checkboxes' && (
+                        <div className="max-h-40 overflow-y-auto border border-dark-700 rounded p-2">
+                          {(field.options || []).map((opt, i) => {
+                            const selected: string[] = formData.templateData?.[section.title]?.[field.label] || [];
+                            const checked = selected.includes(opt);
+                            return (
+                              <label key={i} className="flex items-center gap-2 py-1">
+                                <input
+                                  type="checkbox"
+                                  className="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const next = new Set<string>(selected);
+                                    if ((e.target as HTMLInputElement).checked) next.add(opt); else next.delete(opt);
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      templateData: {
+                                        ...prev.templateData,
+                                        [section.title]: {
+                                          ...prev.templateData?.[section.title],
+                                          [field.label]: Array.from(next)
+                                        }
                                       }
-                                    }
-                                  }));
-                                }}
-                              />
-                              <span className="text-gray-200 text-sm">{opt}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {field.type === 'file' && (
-                      <input
-                        type="file"
-                        className="input w-full"
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: (e.target as HTMLInputElement).files ? Array.from((e.target as HTMLInputElement).files as FileList).map(f => f.name) : []
+                                    }));
+                                  }}
+                                />
+                                <span className="text-gray-200 text-sm">{opt}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'file' && (
+                        <input
+                          type="file"
+                          className="input w-full"
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: (e.target as HTMLInputElement).files ? Array.from((e.target as HTMLInputElement).files as FileList).map(f => f.name) : []
+                              }
                             }
-                          }
-                        }))}
-                        multiple
-                      />
-                    )}
-                    {field.type === 'table' && !isTestsAdministeredSection(section.title) && (
-                      <textarea
-                        className="textarea w-full"
-                        rows={4}
-                        placeholder={field.placeholder || 'Paste or enter structured rows'}
-                        value={formData.templateData?.[section.title]?.[field.label] || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          templateData: {
-                            ...prev.templateData,
-                            [section.title]: {
-                              ...prev.templateData?.[section.title],
-                              [field.label]: e.target.value
+                          }))}
+                          multiple
+                        />
+                      )}
+                      {!forceLanguagesAtHomeText && field.type === 'table' && !isTestsAdministeredSection(section.title) && (
+                        <textarea
+                          className="textarea w-full"
+                          rows={4}
+                          placeholder={field.placeholder || 'Paste or enter structured rows'}
+                          value={formData.templateData?.[section.title]?.[field.label] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: {
+                                ...prev.templateData?.[section.title],
+                                [field.label]: e.target.value
+                              }
                             }
-                          }
-                        }))}
-                      />
-                    )}
-                  </div>
-                ))}
+                          }))}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
