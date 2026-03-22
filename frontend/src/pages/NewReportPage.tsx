@@ -414,8 +414,13 @@ export default function NewReportPage() {
   const isTestsAdministeredSection = (title: string) => title.trim().toLowerCase() === 'tests administered';
   const isDemographicsSection = (title: string) => title.trim().toLowerCase().includes('demographic');
   const isFamilyHistorySection = (title: string) => title.trim().toLowerCase().includes('family history');
+  const isPrenatalExposureSection = (title: string) => {
+    const normalized = title.trim().toLowerCase();
+    return normalized.includes('prenatal exposure') || (normalized.includes('prenatal') && normalized.includes('exposure'));
+  };
   const LANGUAGES_AT_HOME_KEY = 'Languages at home';
   const FAMILY_HISTORY_NOTES_KEY = 'Family History Notes';
+  const PRENATAL_EXPOSURE_DETAILS_KEY = 'Exposure Details';
   const isLanguagesAtHomeFieldLabel = (label: string) => {
     const normalized = label.trim().toLowerCase();
     return normalized === 'languages spoken at home' || normalized === 'languages at home';
@@ -665,6 +670,27 @@ export default function NewReportPage() {
                           [section.title]: {
                             ...prev.templateData?.[section.title],
                             [FAMILY_HISTORY_NOTES_KEY]: e.target.value
+                          }
+                        }
+                      }))}
+                    />
+                  </div>
+                ) : null}
+
+                {isPrenatalExposureSection(section.title) && !section.fields.some((f) => f.label.trim().toLowerCase() === PRENATAL_EXPOSURE_DETAILS_KEY.toLowerCase()) ? (
+                  <div>
+                    <label className="text-white text-sm mb-2 block">{PRENATAL_EXPOSURE_DETAILS_KEY}</label>
+                    <textarea
+                      className="textarea w-full"
+                      rows={4}
+                      value={formData.templateData?.[section.title]?.[PRENATAL_EXPOSURE_DETAILS_KEY] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        templateData: {
+                          ...prev.templateData,
+                          [section.title]: {
+                            ...prev.templateData?.[section.title],
+                            [PRENATAL_EXPOSURE_DETAILS_KEY]: e.target.value
                           }
                         }
                       }))}
