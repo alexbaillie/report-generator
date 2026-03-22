@@ -115,6 +115,15 @@ def sections_schema():
         "fields": [
             {"label": "Birth history", "type": "select", "options": ["Uncomplicated","Complications","Unknown"]},
             {"label": "Prenatal exposure", "type": "checkboxes", "options": ["Alcohol","Tobacco","Medications","Other","None"]},
+            {"label": "Exposure Frequency", "type": "select", "options": [
+                "None",
+                "One-time",
+                "Occasional",
+                "Weekly",
+                "Daily",
+                "Unknown",
+                "Other"
+            ]},
             {"label": "Medical concerns", "type": "checkboxes", "options": ["Seizures","Head injury","Chronic illness","None","Other"]},
             {"label": "Sensory/hearing concerns", "type": "select", "options": ["Yes","No","Unknown"]}
         ]
@@ -122,7 +131,7 @@ def sections_schema():
     s.append({
         "title": "Educational History",
         "fields": [
-            {"label": "Current grade", "type": "select", "options": ["K","1","2","3","4","5","6","7","8","9","10","11","12"]},
+            {"label": "Current grade", "type": "select", "options": ["K","1","2","3","4","5","6","7","8","9","10","11","12","Graduated High School","College / University","Graduate School","Not Currently in School"]},
             {"label": "School name", "type": "text"},
             {"label": "Supports received", "type": "checkboxes", "options": [
                 "Learning support teacher","1:1 aide","SLP","IEP"

@@ -420,6 +420,7 @@ export default function NewReportPage() {
   };
   const LANGUAGES_AT_HOME_KEY = 'Languages at home';
   const FAMILY_HISTORY_NOTES_KEY = 'Family History Notes';
+  const PRENATAL_EXPOSURE_FREQUENCY_KEY = 'Exposure Frequency';
   const PRENATAL_EXPOSURE_DETAILS_KEY = 'Exposure Details';
   const isLanguagesAtHomeFieldLabel = (label: string) => {
     const normalized = label.trim().toLowerCase();
@@ -674,6 +675,69 @@ export default function NewReportPage() {
                         }
                       }))}
                     />
+                  </div>
+                ) : null}
+
+                {isPrenatalExposureSection(section.title) && !section.fields.some((f) => f.label.trim().toLowerCase() === PRENATAL_EXPOSURE_FREQUENCY_KEY.toLowerCase()) ? (
+                  <div>
+                    <label className="text-white text-sm mb-2 block">{PRENATAL_EXPOSURE_FREQUENCY_KEY}</label>
+                    <select
+                      className="input w-full"
+                      value={formData.templateData?.[section.title]?.[PRENATAL_EXPOSURE_FREQUENCY_KEY] || ''}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        const otherKey = `${PRENATAL_EXPOSURE_FREQUENCY_KEY} - Other (specify)`;
+                        setFormData(prev => {
+                          const prevSection = prev.templateData?.[section.title] || {};
+                          const nextSection: Record<string, any> = {
+                            ...prevSection,
+                            [PRENATAL_EXPOSURE_FREQUENCY_KEY]: nextValue,
+                          };
+
+                          if (nextValue !== 'Other') {
+                            delete nextSection[otherKey];
+                          }
+
+                          return {
+                            ...prev,
+                            templateData: {
+                              ...prev.templateData,
+                              [section.title]: nextSection,
+                            },
+                          };
+                        });
+                      }}
+                    >
+                      <option value="">Select</option>
+                      <option value="None">None</option>
+                      <option value="One-time">One-time</option>
+                      <option value="Occasional">Occasional</option>
+                      <option value="Weekly">Weekly</option>
+                      <option value="Daily">Daily</option>
+                      <option value="Unknown">Unknown</option>
+                      <option value="Other">Other</option>
+                    </select>
+
+                    {(formData.templateData?.[section.title]?.[PRENATAL_EXPOSURE_FREQUENCY_KEY] || '') === 'Other' ? (
+                      <input
+                        type="text"
+                        className="input w-full mt-2"
+                        placeholder="Please specify"
+                        value={
+                          formData.templateData?.[section.title]?.[`${PRENATAL_EXPOSURE_FREQUENCY_KEY} - Other (specify)`] || ''
+                        }
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          templateData: {
+                            ...prev.templateData,
+                            [section.title]: {
+                              ...prev.templateData?.[section.title],
+                              [`${PRENATAL_EXPOSURE_FREQUENCY_KEY} - Other (specify)`]: e.target.value
+                            }
+                          }
+                        }))}
+                      />
+                    ) : null}
                   </div>
                 ) : null}
 
