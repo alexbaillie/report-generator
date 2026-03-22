@@ -10,6 +10,27 @@ This guide is for psychologists using PsychReportGen to create and export report
 
 AI output is a draft. Always review and edit before finalizing.
 
+## App tabs (what each one is for)
+
+PsychReportGen uses a left sidebar to switch between tabs.
+
+- **Home**
+  - A simple starting page.
+  - If you’re not sure where to go, start here, then select **New Report**.
+- **New Report**
+  - Where you create a new report from a clinic template.
+  - Fill out the form fields and generate section drafts.
+- **Text Editor**
+  - A general-purpose writing area.
+  - Use this if you want to draft or rewrite text with AI assistance outside the report form.
+  - It does not replace clinical review.
+- **Reports**
+  - Where all previously generated reports are listed.
+  - Open a report to review it, and use **Export** to download a `.txt` file.
+- **Templates**
+  - Where report templates are managed.
+  - Most psychologists will not need to change templates. If your clinic manager asks you to use a specific template, select it in **New Report**.
+
 ## Quick start (first report)
 
 ### 1) Start the app
@@ -57,15 +78,6 @@ After generation, the app opens the saved report.
 3. Select **Export** to download a `.txt` file.
 
 Tip: After exporting, you can paste the text into Word/Google Docs for formatting.
-
-## Documents (optional)
-
-Go to **Documents** to upload supporting files:
-
-- Accepted types: `.txt`, `.pdf`, `.doc`, `.docx`
-- You can view extracted text for some file types.
-
-Depending on the clinic setup, uploaded documents may be for reference and may not automatically be included in generation.
 
 ## Good habits for best AI results
 
