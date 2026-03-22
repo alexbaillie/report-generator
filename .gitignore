@@ -44,3 +44,8 @@ frontend/.electron-cache/
 # Environment
 .env
 .env.local
+
+ollama/win/*
+!ollama/win/.gitkeep
+ollama/model-store/*
+!ollama/model-store/.gitkeep

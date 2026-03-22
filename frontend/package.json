@@ -54,6 +54,14 @@
       {
         "from": "../dist/report_generator_backend",
         "to": "report_generator_backend"
+      },
+      {
+        "from": "../ollama/win",
+        "to": "ollama"
+      },
+      {
+        "from": "../ollama/model-store",
+        "to": "ollama_model_store"
       }
     ],
     "directories": {

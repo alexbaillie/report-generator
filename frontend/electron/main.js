@@ -58,10 +58,32 @@ function registerRendererProtocol() {
   });
 }
 
+async function validateOllamaHasRequiredModels() {
+  const tagsUrl = 'http://127.0.0.1:11434/api/tags';
+  const tags = await httpGetJson(tagsUrl, 5000);
+  const models = Array.isArray(tags?.models) ? tags.models : [];
+  const hasTinyLlama = models.some((m) => {
+    const name = (m && typeof m.name === 'string') ? m.name : '';
+    return name.toLowerCase().startsWith('tinyllama');
+  });
+
+  if (!hasTinyLlama) {
+    const msg = 'Ollama is running on 127.0.0.1:11434, but the required model "tinyllama" is not available. Close Ollama and restart PsychReportGen so it can start the bundled Ollama with the preloaded model.';
+    logToFile(msg);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      showErrorInWindow(msg);
+    }
+    throw new Error(msg);
+  }
+}
+
 // Backend process handle
 let backendProcess = null;
 let backendServerPid = null;
 let didStartBackend = false;
+
+// Ollama process handle
+let ollamaProcess = null;
 const logStream = fs.createWriteStream(
   path.join(os.homedir(), 'report-generator-backend.log'),
   { flags: 'a' }
@@ -86,6 +108,202 @@ function logToFile(message) {
   } catch (error) {
     console.error('Logging error:', error);
   }
+}
+
+function safeMkdirpSync(dirPath) {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true });
+  } catch {
+  }
+}
+
+function copyDirRecursiveSync(src, dest) {
+  try {
+    if (!fs.existsSync(src)) return;
+    safeMkdirpSync(dest);
+    fs.cpSync(src, dest, { recursive: true, force: true });
+  } catch (e) {
+    logToFile(`Failed to copy directory from ${src} to ${dest}: ${e && e.message ? e.message : String(e)}`);
+  }
+}
+
+function httpOk(url, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      res.resume();
+      resolve(Boolean(res.statusCode && res.statusCode >= 200 && res.statusCode < 300));
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('timeout'));
+      resolve(false);
+    });
+  });
+}
+
+function httpGetJson(url, timeoutMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      const { statusCode } = res;
+      if (!statusCode || statusCode < 200 || statusCode >= 300) {
+        res.resume();
+        reject(new Error(`HTTP ${statusCode || 'unknown'}`));
+        return;
+      }
+
+      let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        raw += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(raw));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('timeout'));
+      reject(new Error('timeout'));
+    });
+  });
+}
+
+async function ensureOllamaModelStoreInstalled() {
+  try {
+    const srcModelStore = app.isPackaged
+      ? path.join(process.resourcesPath, 'ollama_model_store')
+      : path.join(__dirname, '..', '..', '..', 'ollama', 'model-store');
+
+    const destModelsDir = path.join(app.getPath('userData'), 'ollama', 'models');
+    safeMkdirpSync(destModelsDir);
+
+    const hasManifests = fs.existsSync(path.join(destModelsDir, 'manifests'));
+    const hasBlobs = fs.existsSync(path.join(destModelsDir, 'blobs'));
+    if (hasManifests && hasBlobs) return destModelsDir;
+
+    if (!fs.existsSync(srcModelStore)) {
+      logToFile(`Ollama model store not found at: ${srcModelStore}`);
+      return destModelsDir;
+    }
+
+    logToFile(`Installing Ollama model store from ${srcModelStore} to ${destModelsDir}`);
+    copyDirRecursiveSync(srcModelStore, destModelsDir);
+    return destModelsDir;
+  } catch (e) {
+    logToFile(`Failed to ensure Ollama model store: ${e && e.message ? e.message : String(e)}`);
+    return path.join(app.getPath('userData'), 'ollama', 'models');
+  }
+}
+
+async function startOllama() {
+  const ollamaTagsUrl = 'http://127.0.0.1:11434/api/tags';
+
+  const alreadyUp = await httpOk(ollamaTagsUrl, 1200);
+  if (alreadyUp) {
+    try {
+      await validateOllamaHasRequiredModels();
+      logToFile('Ollama already running on 127.0.0.1:11434; reusing existing instance.');
+      return;
+    } catch (e) {
+      const msg = `Ollama is running but could not validate models: ${e && e.message ? e.message : String(e)}`;
+      logToFile(msg);
+      throw e;
+    }
+  }
+
+  const destModelsDir = await ensureOllamaModelStoreInstalled();
+
+  if (process.platform !== 'win32') {
+    logToFile('Ollama bundling not configured for this platform; skipping Ollama startup.');
+    return;
+  }
+
+  const ollamaDir = app.isPackaged
+    ? path.join(process.resourcesPath, 'ollama')
+    : path.join(__dirname, '..', '..', '..', 'ollama', 'win');
+  const ollamaExePath = path.join(ollamaDir, 'ollama.exe');
+
+  if (!fs.existsSync(ollamaExePath)) {
+    logToFile(`Bundled Ollama binary not found at: ${ollamaExePath}`);
+    return;
+  }
+
+  logToFile(`Starting Ollama from: ${ollamaExePath}`);
+  ollamaProcess = spawn(
+    ollamaExePath,
+    ['serve'],
+    {
+      cwd: ollamaDir,
+      detached: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      env: {
+        ...process.env,
+        OLLAMA_HOST: '127.0.0.1:11434',
+        OLLAMA_MODELS: destModelsDir,
+      },
+    }
+  );
+
+  if (ollamaProcess && ollamaProcess.pid) {
+    logToFile(`Ollama process spawned with PID: ${ollamaProcess.pid}`);
+  }
+
+  if (ollamaProcess?.stdout) {
+    ollamaProcess.stdout.on('data', (data) => {
+      const output = data.toString().trim();
+      if (output) logToFile(`[OLLAMA] ${output}`);
+    });
+  }
+
+  if (ollamaProcess?.stderr) {
+    ollamaProcess.stderr.on('data', (data) => {
+      const output = data.toString().trim();
+      if (output) logToFile(`[OLLAMA STDERR] ${output}`);
+    });
+  }
+
+  if (ollamaProcess) {
+    ollamaProcess.on('error', (error) => {
+      logToFile(`Ollama process error: ${error.message}`);
+    });
+
+    ollamaProcess.on('close', (code, signal) => {
+      logToFile(`Ollama process exited with code ${code}${signal ? `, signal: ${signal}` : ''}`);
+      ollamaProcess = null;
+    });
+  }
+
+  const timeoutMs = 60000;
+  const intervalMs = 500;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const ok = await httpOk(ollamaTagsUrl, 1500);
+    if (ok) {
+      await validateOllamaHasRequiredModels();
+      logToFile('Ollama is ready');
+      return;
+    }
+
+    if (!ollamaProcess) {
+      const okAfterExit = await httpOk(ollamaTagsUrl, 800);
+      if (okAfterExit) {
+        await validateOllamaHasRequiredModels();
+        logToFile('Ollama is ready');
+        return;
+      }
+      break;
+    }
+
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+
+  logToFile(`Ollama did not become ready within ${timeoutMs / 1000}s.`);
 }
 
 // Helper function to get system command path
@@ -117,7 +335,7 @@ function getSystemCommandPath(command) {
 }
 
 // Start the backend process
-function startBackend() {
+function startBackend(envOverrides = {}) {
   try {
     backendServerPid = null;
     didStartBackend = false;
@@ -163,6 +381,7 @@ function startBackend() {
           cwd: backendDir,
           detached: false,
           stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, ...envOverrides },
         }
       );
     } else if (fs.existsSync(backendExePath)) {
@@ -175,7 +394,8 @@ function startBackend() {
           cwd: backendDir,
           detached: false,
           stdio: ['ignore', 'pipe', 'pipe'],
-          windowsHide: true
+          windowsHide: true,
+          env: { ...process.env, ...envOverrides },
         }
       );
     } else {
@@ -191,7 +411,8 @@ function startBackend() {
           detached: false,
           stdio: ['ignore', 'pipe', 'pipe'],
           shell: false,
-          windowsHide: true
+          windowsHide: true,
+          env: { ...process.env, ...envOverrides },
         }
       );
     }
@@ -344,6 +565,18 @@ function stopBackendSync() {
     backendProcess = null;
     backendServerPid = null;
     didStartBackend = false;
+  }
+}
+
+function stopOllama() {
+  if (ollamaProcess) {
+    logToFile('Stopping Ollama process...');
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(ollamaProcess.pid), '/f', '/t']);
+    } else {
+      ollamaProcess.kill();
+    }
+    ollamaProcess = null;
   }
 }
 
@@ -690,13 +923,16 @@ app.whenReady().then(() => {
   registerRendererProtocol();
   createWindow();
   
-  // Start the backend when in production
+  // Start Ollama + backend when in production
   if (process.env.NODE_ENV !== 'development') {
-    logToFile('Starting backend process...');
-  }
-  // Always start backend in production, even if logging fails
-  if (process.env.NODE_ENV !== 'development') {
-    startBackend();
+    (async () => {
+      logToFile('Starting Ollama + backend processes...');
+      await startOllama();
+      startBackend({ OLLAMA_BASE_URL: 'http://127.0.0.1:11434' });
+    })().catch((e) => {
+      logToFile(`Failed to start Ollama/backend: ${e && e.message ? e.message : String(e)}`);
+      startBackend({ OLLAMA_BASE_URL: 'http://127.0.0.1:11434' });
+    });
   }
 
   // On macOS it's common to re-create a window when the dock icon is clicked
@@ -718,6 +954,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   logToFile('All windows closed');
   stopBackendSync();
+  stopOllama();
   
   // On macOS it's common for applications to stay open until the user quits explicitly
   if (process.platform !== 'darwin') {
@@ -741,6 +978,7 @@ app.on('before-quit', () => {
 app.on('will-quit', (event) => {
   logToFile('Application will quit');
   stopBackend();
+  stopOllama();
   
   // Close log stream if it's still open
   if (isLogStreamWritable()) {
