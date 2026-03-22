@@ -415,6 +415,7 @@ export default function NewReportPage() {
   const isDemographicsSection = (title: string) => title.trim().toLowerCase().includes('demographic');
   const isFamilyHistorySection = (title: string) => title.trim().toLowerCase().includes('family history');
   const LANGUAGES_AT_HOME_KEY = 'Languages at home';
+  const FAMILY_HISTORY_NOTES_KEY = 'Family History Notes';
   const isLanguagesAtHomeFieldLabel = (label: string) => {
     const normalized = label.trim().toLowerCase();
     return normalized === 'languages spoken at home' || normalized === 'languages at home';
@@ -643,6 +644,27 @@ export default function NewReportPage() {
                           [section.title]: {
                             ...prev.templateData?.[section.title],
                             [LANGUAGES_AT_HOME_KEY]: e.target.value
+                          }
+                        }
+                      }))}
+                    />
+                  </div>
+                ) : null}
+
+                {isFamilyHistorySection(section.title) && !section.fields.some((f) => f.label.trim().toLowerCase() === FAMILY_HISTORY_NOTES_KEY.toLowerCase()) ? (
+                  <div>
+                    <label className="text-white text-sm mb-2 block">{FAMILY_HISTORY_NOTES_KEY}</label>
+                    <textarea
+                      className="textarea w-full"
+                      rows={4}
+                      value={formData.templateData?.[section.title]?.[FAMILY_HISTORY_NOTES_KEY] || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        templateData: {
+                          ...prev.templateData,
+                          [section.title]: {
+                            ...prev.templateData?.[section.title],
+                            [FAMILY_HISTORY_NOTES_KEY]: e.target.value
                           }
                         }
                       }))}
