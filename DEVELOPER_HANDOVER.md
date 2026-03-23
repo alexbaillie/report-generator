@@ -15,7 +15,7 @@ The desktop app is an Electron shell that starts:
 
 - A React UI (packaged into the Electron app).
 - A local FastAPI backend server bound to `127.0.0.1:8000`.
-- A local Ollama server (bundled) bound to `127.0.0.1:11434`.
+- A local Ollama server (bundled runtime) bound to `127.0.0.1:11434`.
 
 All communication is local HTTP.
 
@@ -43,7 +43,10 @@ Key files:
 Responsibilities of `frontend/electron/main.js`:
 
 - Register a custom `app://` protocol for loading the packaged React build.
-- Start bundled Ollama (if needed) and validate the `tinyllama` model is available.
+- Start bundled Ollama (if needed). If the required model (`tinyllama`) is missing, prompt the user to:
+  - download it (requires internet), or
+  - import an offline models folder, or
+  - continue without AI.
 - Start the bundled FastAPI backend executable.
 - Poll `http://127.0.0.1:8000/health` and only then display the “real” UI.
 - Log backend / Ollama stdout + stderr to a logfile in the user home directory.
@@ -94,15 +97,17 @@ Key files:
 - `ollama/`
   - Staging directory used at build time for bundling the Ollama runtime + model store.
   - This directory is intentionally ignored (large binaries/models). Only `.gitkeep` files are committed.
+  - Current release approach:
+    - `ollama/win` (Ollama runtime) is bundled into the Electron app.
+    - `ollama/model-store` (models) is not bundled into the installer by default to keep NSIS installs reliable.
 
 ## How the app starts (runtime flow)
 
 1. User launches the packaged Electron app.
 2. Electron creates the BrowserWindow and shows a loading screen until backend is ready.
-3. Electron ensures the Ollama model store exists in a writable per-user location.
+3. Electron uses a per-user writable model directory: `app.getPath('userData')/ollama/models`.
 4. Electron starts Ollama (`ollama.exe serve`) unless an Ollama already exists on `127.0.0.1:11434`.
-   - If Ollama already exists, it validates that `tinyllama` is available.
-   - If the port is occupied and `tinyllama` is missing, the UI surfaces an actionable error.
+   - If Ollama is up but `tinyllama` is missing, the user is prompted to download/import/skip.
 5. Electron starts the backend (`report_generator_backend.exe`) with `OLLAMA_BASE_URL` set.
 6. Electron polls `/health` and, once ready, loads the packaged React app.
 
@@ -145,16 +150,20 @@ The Electron build runs this automatically via the `preelectron:build` script:
 - `report-generator/build_exe.ps1` runs PyInstaller using `pyinstaller.spec`.
 - The output ends up under `dist/report_generator_backend/`.
 
-### Prepare bundled Ollama inputs (required for a fully offline build)
+### Prepare bundled Ollama inputs
 
-Before running `npm run electron:build`, populate these staging directories:
+Before running `npm run electron:build`, populate this staging directory:
 
 - `ollama/win/`
   - Must contain `ollama.exe`.
+
+Optional (recommended for air-gapped clinics as a separate artifact, not bundled in the installer by default):
+
 - `ollama/model-store/`
-  - Must contain an Ollama model cache structure, typically copied from:
+  - A copy of an Ollama model cache, typically copied from:
     - `C:\Users\<you>\.ollama\models\`
   - Must include the `tinyllama` model under `manifests/` and the referenced blobs under `blobs/`.
+  - This can be distributed as an offline “models pack” folder/zip and imported by the app on first run.
 
 These staging directories are ignored by git to avoid committing large binaries.
 
@@ -167,13 +176,15 @@ From `frontend/`:
 Outputs go to:
 
 - `frontend/release/win-unpacked/` (unpacked app folder, best for debugging)
-- `frontend/release/PsychReportGen-<version>.exe` (portable exe)
+- `frontend/release/PsychReportGen-<version>-Setup.exe` (Windows installer)
+- `frontend/release/PsychReportGen-<version>-Portable.exe` (portable exe)
 
 electron-builder bundles extra resources into the app:
 
 - `dist/report_generator_backend` -> `resources/report_generator_backend`
 - `ollama/win` -> `resources/ollama`
-- `ollama/model-store` -> `resources/ollama_model_store`
+
+By default, the model store is not bundled into the installer to avoid multi-GB NSIS payload/extraction failures. Instead, the app prompts the user to download `tinyllama` (internet) or import an offline models folder.
 
 ## Logs and debugging
 
@@ -250,7 +261,7 @@ Note: some docs mention “encrypted SQLite”; current implementation uses plai
 - Make ports configurable (8000/11434) with auto-selection when occupied, and ensure frontend uses runtime-discovered backend URL.
 - Improve Ollama/model management:
   - A settings screen showing model status and installed models.
-  - Ability to import an offline “model pack” zip.
+  - Optional: ability to import an offline “model pack” zip (current implementation supports importing a models folder from the startup prompt).
 
 ### Product / UX
 
@@ -266,7 +277,10 @@ Note: some docs mention “encrypted SQLite”; current implementation uses plai
 
 ### Build/release
 
-- Document a repeatable release pipeline (CI) including how to obtain/bundle Ollama runtime and model store.
+- Document a repeatable release pipeline (CI) including:
+  - bundling the Ollama runtime (`ollama/win`), and
+  - shipping the installer without the model store (`ollama/model-store`) to avoid multi-GB NSIS payload/extraction failures.
+- If fully-offline installs are a requirement, provide a separate offline “models pack” artifact (zip/folder) that can be imported on first run.
 - Consider code signing for Windows builds.
 
 ## Notes about existing documentation

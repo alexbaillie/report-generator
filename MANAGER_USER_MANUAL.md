@@ -38,6 +38,11 @@ The template content is used for two things:
 - The backend and AI run locally.
 - Reports are stored locally.
 
+Note:
+
+- The AI model (`tinyllama`) must be present on the computer for AI drafting to work.
+- If `tinyllama` is missing, the app will prompt you to either download it (requires internet) or import an offline models folder.
+
 ### AI drafts are not final clinical output
 
 AI output must be reviewed and edited by a licensed clinician. The goal is to speed up drafting and maintain consistency, not to replace clinical judgment.
@@ -53,6 +58,10 @@ AI output must be reviewed and edited by a licensed clinician. The goal is to sp
   - Create a report using the default template.
   - Generate a few sections.
   - Export the report.
+
+If AI generation does not work during the test report run:
+
+- If you see a prompt about the required model `tinyllama`, follow the steps in “AI generation fails” under Troubleshooting.
 
 ## Managing templates
 
@@ -277,7 +286,13 @@ Possible causes:
 What to do:
 
 - Close the app and re-open.
-- If there is an error message about the model, share it with the support person.
+- If a prompt appears saying the model `tinyllama` is missing:
+  - Select **Download model** to download it automatically.
+    - This requires internet access for the computer (at least once).
+  - If your clinic computers do not have internet access, select **Import models folder** and choose the offline model store folder provided by your support person.
+    - The folder must contain subfolders named `manifests` and `blobs`.
+  - Select **Continue without AI** only if you want to use the app without AI drafting.
+- If you see an error message about the model, share it with the support person.
 
 ### A template does not create the form fields you expected
 

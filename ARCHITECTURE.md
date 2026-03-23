@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The Psychological Report Generator is a fully offline desktop application built with a modern tech stack designed for security, performance, and maintainability.
+The Psychological Report Generator is a local-first desktop application built with a modern tech stack designed for security, performance, and maintainability.
 
 ## Architecture Diagram
 
@@ -39,7 +39,7 @@ The Psychological Report Generator is a fully offline desktop application built 
 │                           │               │                  │
 │                     ┌─────▼───────┐       │                  │
 │                     │   SQLite    │       │                  │
-│                     │  (Encrypted)│       │                  │
+│                     │ (Local DB)  │       │                  │
 │                     └─────────────┘       │                  │
 └───────────────────────────────────────────┼──────────────────┘
                                             │ HTTP
@@ -188,6 +188,11 @@ psychological-report-generator/
 - Backend only listens on localhost (127.0.0.1)
 - CORS restricted to local origins
 - No authentication needed (single-user local app)
+
+Note:
+
+- The app does not require internet for normal operation.
+- Internet is only used if a user explicitly chooses to download an AI model (for example, the `tinyllama` model via Ollama).
 
 ## Performance Considerations
 

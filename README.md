@@ -1,14 +1,14 @@
 # Psychological Report Generator
 
-A fully offline desktop application for generating psychological reports using local AI.
+A local-first desktop application for generating psychological reports using local AI.
 
 ## Features
 
 - 📝 Generate psychological reports from session notes and test results
-- 🔒 Fully offline and secure with encrypted local storage
+- 🔒 Local-first (offline by default) with local storage
 - 🤖 AI-powered report generation using Ollama (TinyLLaMA)
 - 📄 Document upload and processing
-- 💾 Local SQLite database with encryption
+- 💾 Local SQLite database (encryption is planned)
 - 🎨 Modern UI built with React and TailwindCSS
 
 ## Tech Stack
@@ -16,7 +16,7 @@ A fully offline desktop application for generating psychological reports using l
 - **Frontend**: React + TailwindCSS + TypeScript
 - **Desktop**: Electron
 - **Backend**: FastAPI (Python)
-- **Database**: SQLite with encryption
+- **Database**: SQLite (encryption planned)
 - **AI**: Ollama (TinyLLaMA model)
 - **Testing**: Jest, React Testing Library, Pytest
 
@@ -24,17 +24,19 @@ A fully offline desktop application for generating psychological reports using l
 
 - Node.js 18+ and npm
 - Python 3.9+
-- Ollama installed locally
+- Ollama installed locally (recommended for development)
 
 ## Installation
 
-### 1. Install Ollama and TinyLLaMA model
+### 1. Install Ollama and TinyLLaMA model (development)
 
 ```bash
 # Install Ollama from https://ollama.ai
 # Then pull the TinyLLaMA model
 ollama pull tinyllama
 ```
+
+For packaged desktop builds (the Windows installer), the Ollama runtime is bundled with the app. If the model is missing, the app will prompt the user to download `tinyllama` (requires internet) or import an offline models folder.
 
 ### 2. Install Python dependencies
 
@@ -81,7 +83,7 @@ npm run build
 npm run electron:build
 ```
 
-This will create distributable packages in the `frontend/dist` directory.
+This will create distributable packages in the `frontend/release` directory.
 
 ## Project Structure
 
@@ -108,8 +110,8 @@ psychological-report-generator/
 
 ## Security
 
-- All data is stored locally in an encrypted SQLite database
-- No internet connection required after initial setup
+- All data is stored locally in a SQLite database (encryption is planned)
+- No internet connection is required for normal operation (internet is only used if a user explicitly chooses to download an AI model)
 - Patient data never leaves your machine
 
 ## License

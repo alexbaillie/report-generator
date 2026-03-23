@@ -19,6 +19,11 @@ Before you begin, ensure you have the following installed:
    - Install the TinyLLaMA model: `ollama pull tinyllama`
    - Verify Ollama is running: `ollama list`
 
+Note:
+
+- For development, you should install Ollama and `tinyllama` locally.
+- For packaged desktop builds (Windows installer), the Ollama runtime is bundled with the app. If `tinyllama` is missing, the app will prompt the user to download it (requires internet) or import an offline models folder.
+
 ## Step 1: Backend Setup
 
 ### 1.1 Navigate to backend directory
@@ -148,7 +153,11 @@ npm run build
 npm run electron:build
 ```
 
-The distributable will be created in `frontend/dist/`
+The distributable will be created in `frontend/release/`
+
+Note:
+
+- In the current Electron build configuration, artifacts are written under `frontend/release/`.
 
 ### Supported Platforms
 - **Windows**: Creates `.exe` installer
@@ -179,7 +188,7 @@ npm test
 ## Security Notes
 
 - All data is stored locally in `backend/data/`
-- No internet connection required after setup
+- No internet connection is required for normal operation (internet is only used if a user explicitly chooses to download an AI model)
 - Patient data never leaves your machine
 - Consider encrypting the data directory for additional security
 

@@ -10,6 +10,13 @@ This guide is for psychologists using PsychReportGen to create and export report
 
 AI output is a draft. Always review and edit before finalizing.
 
+Note:
+
+- The AI model used by the app is `tinyllama`.
+- The installer does not download/install AI models.
+- If `tinyllama` is not installed on your computer, the app will prompt you to download it (requires internet) or import an offline models folder.
+  - To download in the app: select **Download model** when prompted.
+
 ## App tabs (what each one is for)
 
 PsychReportGen uses a left sidebar to switch between tabs.
@@ -104,6 +111,14 @@ Tip: After exporting, you can paste the text into Word/Google Docs for formattin
 - If it continues:
   - Close and re-open the app.
   - Let your clinic support person know what you were trying to generate.
+
+If you see a prompt that the model `tinyllama` is missing:
+
+- Select **Download model** to download it automatically.
+  - This requires internet access for the computer (at least once).
+- If your clinic computer does not have internet access, select **Import models folder** and choose the offline models folder provided by your clinic support person.
+  - The folder must contain subfolders named `manifests` and `blobs`.
+- Select **Continue without AI** only if you want to proceed without AI drafting.
 
 ### Pasting a table didn’t work
 

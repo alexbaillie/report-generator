@@ -10,6 +10,14 @@ It is written for the current architecture:
 ## Current state (baseline)
 
 - Model: `tinyllama` (hard-coded in `llm_service.py`)
+- Model distribution/runtime:
+  - The Ollama runtime is bundled with the desktop app on Windows.
+  - The installer does not bundle the Ollama model store by default.
+  - If the required model (`tinyllama`) is missing, the desktop app prompts the user to:
+    - download it (requires internet), or
+    - import an offline models folder, or
+    - continue without AI.
+  - Normal operation remains local-first; internet is only used if the user explicitly chooses the download option.
 - Prompt style:
   - `llm_service.py` asks for a “complete updated report” given current content + instruction.
   - `report_generator.py` generates per-section paragraphs and asks for “only the content” and “no headers”.
