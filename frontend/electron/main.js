@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 
 const RENDERER_PROTOCOL = 'app';
+const REQUIRED_OLLAMA_MODEL = 'tinyllama';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -58,23 +59,120 @@ function registerRendererProtocol() {
   });
 }
 
-async function validateOllamaHasRequiredModels() {
+async function hasRequiredOllamaModels(timeoutMs = 5000) {
   const tagsUrl = 'http://127.0.0.1:11434/api/tags';
-  const tags = await httpGetJson(tagsUrl, 5000);
+  const tags = await httpGetJson(tagsUrl, timeoutMs);
   const models = Array.isArray(tags?.models) ? tags.models : [];
-  const hasTinyLlama = models.some((m) => {
+  const hasModel = models.some((m) => {
     const name = (m && typeof m.name === 'string') ? m.name : '';
-    return name.toLowerCase().startsWith('tinyllama');
+    return name.toLowerCase().startsWith(REQUIRED_OLLAMA_MODEL);
   });
 
-  if (!hasTinyLlama) {
-    const msg = 'Ollama is running on 127.0.0.1:11434, but the required model "tinyllama" is not available. Close Ollama and restart PsychReportGen so it can start the bundled Ollama with the preloaded model.';
-    logToFile(msg);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      showErrorInWindow(msg);
+  return hasModel;
+}
+
+function spawnAndWait(command, args, options) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, options);
+    if (child?.stdout) {
+      child.stdout.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) logToFile(`[MODEL SETUP] ${output}`);
+      });
     }
-    throw new Error(msg);
+    if (child?.stderr) {
+      child.stderr.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) logToFile(`[MODEL SETUP STDERR] ${output}`);
+      });
+    }
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Command failed with exit code ${code}`));
+    });
+  });
+}
+
+async function importOllamaModelsFromFolder(destModelsDir) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Ollama models folder',
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || !result.filePaths || !result.filePaths[0]) return false;
+
+  const selected = result.filePaths[0];
+  const hasManifests = fs.existsSync(path.join(selected, 'manifests'));
+  const hasBlobs = fs.existsSync(path.join(selected, 'blobs'));
+  if (!hasManifests || !hasBlobs) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      message: 'Selected folder does not look like an Ollama model store (missing "manifests" or "blobs").',
+    });
+    return false;
   }
+
+  safeMkdirpSync(destModelsDir);
+  try {
+    fs.cpSync(selected, destModelsDir, { recursive: true, force: true });
+    logToFile(`Imported Ollama model store from ${selected} to ${destModelsDir}`);
+    return true;
+  } catch (e) {
+    logToFile(`Failed to import Ollama model store from ${selected} to ${destModelsDir}: ${e && e.message ? e.message : String(e)}`);
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      message: 'Failed to import the model store. Please check permissions and try again.',
+    });
+    return false;
+  }
+}
+
+async function promptOllamaModelSetup(ollamaExePath, ollamaDir, destModelsDir) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+
+  const msg = `The required AI model "${REQUIRED_OLLAMA_MODEL}" is not installed.\n\nYou can download it now (requires internet) or import an offline model pack.`;
+  const choice = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    message: msg,
+    buttons: ['Download model', 'Import models folder', 'Continue without AI'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+
+  if (choice.response === 0) {
+    try {
+      safeMkdirpSync(destModelsDir);
+      await spawnAndWait(
+        ollamaExePath,
+        ['pull', REQUIRED_OLLAMA_MODEL],
+        {
+          cwd: ollamaDir,
+          windowsHide: true,
+          env: {
+            ...process.env,
+            OLLAMA_HOST: '127.0.0.1:11434',
+            OLLAMA_MODELS: destModelsDir,
+          },
+        }
+      );
+      return true;
+    } catch (e) {
+      logToFile(`Failed to download Ollama model: ${e && e.message ? e.message : String(e)}`);
+      await dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        message: 'Failed to download the AI model. Please check your internet connection and try again.',
+      });
+      return false;
+    }
+  }
+
+  if (choice.response === 1) {
+    return await importOllamaModelsFromFolder(destModelsDir);
+  }
+
+  return false;
 }
 
 // Backend process handle
@@ -203,25 +301,12 @@ async function ensureOllamaModelStoreInstalled() {
 async function startOllama() {
   const ollamaTagsUrl = 'http://127.0.0.1:11434/api/tags';
 
-  const alreadyUp = await httpOk(ollamaTagsUrl, 1200);
-  if (alreadyUp) {
-    try {
-      await validateOllamaHasRequiredModels();
-      logToFile('Ollama already running on 127.0.0.1:11434; reusing existing instance.');
-      return;
-    } catch (e) {
-      const msg = `Ollama is running but could not validate models: ${e && e.message ? e.message : String(e)}`;
-      logToFile(msg);
-      throw e;
-    }
-  }
-
-  const destModelsDir = await ensureOllamaModelStoreInstalled();
-
   if (process.platform !== 'win32') {
     logToFile('Ollama bundling not configured for this platform; skipping Ollama startup.');
     return;
   }
+
+  const destModelsDir = await ensureOllamaModelStoreInstalled();
 
   const ollamaDir = app.isPackaged
     ? path.join(process.resourcesPath, 'ollama')
@@ -230,6 +315,27 @@ async function startOllama() {
 
   if (!fs.existsSync(ollamaExePath)) {
     logToFile(`Bundled Ollama binary not found at: ${ollamaExePath}`);
+    return;
+  }
+
+  const alreadyUp = await httpOk(ollamaTagsUrl, 1200);
+  if (alreadyUp) {
+    const hasModel = await hasRequiredOllamaModels(5000).catch(() => false);
+    if (hasModel) {
+      logToFile('Ollama already running on 127.0.0.1:11434; reusing existing instance.');
+      return;
+    }
+
+    const didSetup = await promptOllamaModelSetup(ollamaExePath, ollamaDir, destModelsDir);
+    if (!didSetup) {
+      logToFile('Continuing without required Ollama model.');
+      return;
+    }
+
+    const hasModelAfter = await hasRequiredOllamaModels(10000).catch(() => false);
+    if (!hasModelAfter) {
+      logToFile('Ollama is running but required model is still unavailable after setup.');
+    }
     return;
   }
 
@@ -285,16 +391,36 @@ async function startOllama() {
   while (Date.now() - start < timeoutMs) {
     const ok = await httpOk(ollamaTagsUrl, 1500);
     if (ok) {
-      await validateOllamaHasRequiredModels();
-      logToFile('Ollama is ready');
+      const hasModel = await hasRequiredOllamaModels(5000).catch(() => false);
+      if (hasModel) {
+        logToFile('Ollama is ready');
+        return;
+      }
+
+      const didSetup = await promptOllamaModelSetup(ollamaExePath, ollamaDir, destModelsDir);
+      if (!didSetup) {
+        logToFile('Ollama started without required model; continuing without AI model.');
+        return;
+      }
+
+      const hasModelAfter = await hasRequiredOllamaModels(15000).catch(() => false);
+      if (hasModelAfter) {
+        logToFile('Ollama is ready');
+      } else {
+        logToFile('Required Ollama model is still unavailable after setup.');
+      }
       return;
     }
 
     if (!ollamaProcess) {
       const okAfterExit = await httpOk(ollamaTagsUrl, 800);
       if (okAfterExit) {
-        await validateOllamaHasRequiredModels();
-        logToFile('Ollama is ready');
+        const hasModel = await hasRequiredOllamaModels(5000).catch(() => false);
+        if (hasModel) {
+          logToFile('Ollama is ready');
+        } else {
+          logToFile('Ollama is ready but required model is missing.');
+        }
         return;
       }
       break;

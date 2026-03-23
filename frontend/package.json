@@ -57,11 +57,11 @@
       },
       {
         "from": "../ollama/win",
-        "to": "ollama"
-      },
-      {
-        "from": "../ollama/model-store",
-        "to": "ollama_model_store"
+        "to": "ollama",
+        "filter": [
+          "**/*",
+          "!lib/ollama/rocblas/**"
+        ]
       }
     ],
     "directories": {
@@ -69,10 +69,22 @@
       "output": "release"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
       "icon": "assets/icon.ico",
-      "artifactName": "PsychReportGen-${version}.${ext}",
+      "artifactName": "PsychReportGen-${version}-Setup.${ext}",
       "executableName": "PsychReportGen"
+    },
+    "portable": {
+      "artifactName": "PsychReportGen-${version}-Portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
