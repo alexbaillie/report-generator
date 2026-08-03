@@ -15,7 +15,7 @@ async def generate_text(prompt: str, model: Optional[str] = None, max_tokens: in
     
     Args:
         prompt: The prompt to send to the model
-        model: The model to use (default: tinyllama)
+        model: The model to use (defaults to OLLAMA_MODEL, i.e. llama3.1:8b)
         max_tokens: Maximum tokens to generate
     
     Returns:
