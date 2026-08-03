@@ -2,6 +2,7 @@
 Documents API endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
@@ -26,24 +27,32 @@ class DocumentResponse(BaseModel):
     uploaded_at: datetime
     report_id: Optional[int]
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
+def _save_upload(file: UploadFile, file_path: Path) -> None:
+    """Write the uploaded stream to disk (blocking; run off the event loop)."""
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Upload and process a document"""
     try:
-        # Save file
-        file_path = UPLOAD_DIR / file.filename
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
+        # Use only the base filename to avoid path traversal from a crafted upload name.
+        safe_name = Path(file.filename or "upload").name
+        if not safe_name:
+            raise HTTPException(status_code=400, detail="Invalid filename.")
+
+        # Save file (blocking I/O offloaded so it does not stall the event loop).
+        file_path = UPLOAD_DIR / safe_name
+        await run_in_threadpool(_save_upload, file, file_path)
+
         # Process document to extract text
         content = await process_document(file_path, file.content_type)
         
         # Save to database
         db_document = Document(
-            filename=file.filename,
+            filename=safe_name,
             file_path=str(file_path),
             file_type=file.content_type or "unknown",
             content=content
@@ -51,8 +60,10 @@ async def upload_document(file: UploadFile = File(...), db: Session = Depends(ge
         db.add(db_document)
         db.commit()
         db.refresh(db_document)
-        
+
         return db_document
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

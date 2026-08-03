@@ -86,6 +86,7 @@ function Copy-IfExists {
 Copy-IfExists -source "backend/data" -destination "$distDir/backend/data"
 Copy-IfExists -source "backend/ollama_models" -destination "$distDir/backend/ollama_models"
 Copy-IfExists -source "backend/database" -destination "$distDir/backend/database"
+Copy-IfExists -source "backend/templates" -destination "$distDir/backend/templates"
 
 # Create a run script for Windows
 $runScript = @"

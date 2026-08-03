@@ -36,10 +36,19 @@ Thumbs.db
 # Data
 backend/data/
 *.db
+*.db.*
 *.sqlite
 *.sqlite3
 frontend/release/
 frontend/.electron-cache/
+
+# Generated reports may contain patient data — never commit
+outputs/
+
+# Local tooling / logs / editor state
+.codex-docx/
+.codex-run/
+.claude/settings.local.json
 
 # Environment
 .env

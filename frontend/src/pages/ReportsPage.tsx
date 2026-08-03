@@ -15,6 +15,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportingReportId, setExportingReportId] = useState<number | null>(null);
 
   useEffect(() => {
     loadReports();
@@ -46,14 +47,43 @@ export default function ReportsPage() {
     }
   };
 
-  const handleExport = (report: Report) => {
-    const blob = new Blob([report.content], { type: 'text/plain' });
+  const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${report.title.replace(/\s+/g, '_')}.txt`;
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const isAsdReport = (report: Report) => {
+    const label = `${report.title} ${report.report_type}`.toLowerCase();
+    return label.includes('asd') || label.includes('autism');
+  };
+
+  const handleExport = async (report: Report) => {
+    if (isAsdReport(report)) {
+      setExportingReportId(report.id);
+      try {
+        const response = await api.exportReportDocx(report.id);
+        const disposition = String(response.headers['content-disposition'] || '');
+        const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+        const filename = filenameMatch?.[1]
+          || `${report.title.replace(/\s+/g, '_')}.docx`;
+        downloadBlob(response.data, filename);
+      } catch (error) {
+        alert('Failed to export this report as a Word document.');
+        console.error('DOCX export failed:', error);
+      } finally {
+        setExportingReportId(null);
+      }
+      return;
+    }
+
+    const blob = new Blob([report.content], { type: 'text/plain' });
+    downloadBlob(blob, `${report.title.replace(/\s+/g, '_')}.txt`);
   };
 
   return (
@@ -119,10 +149,15 @@ export default function ReportsPage() {
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleExport(selectedReport)}
+                  disabled={exportingReportId === selectedReport.id}
                   className="btn btn-secondary flex items-center"
                 >
                   <Download size={18} className="mr-2" />
-                  Export
+                  {exportingReportId === selectedReport.id
+                    ? 'Exporting...'
+                    : isAsdReport(selectedReport)
+                      ? 'Export Word'
+                      : 'Export'}
                 </button>
                 <button
                   onClick={() => handleDelete(selectedReport.id)}

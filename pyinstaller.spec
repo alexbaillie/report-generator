@@ -27,6 +27,7 @@ a = Analysis(
         'email.encoders',
         'PyPDF2',
         'docx',
+        'lxml.etree',
         'pdfplumber',
     ],
     hookspath=[],
@@ -50,6 +51,7 @@ def add_dir_if_exists(analysis, source, target):
 # Add existing directories
 add_dir_if_exists(a, 'backend/data', 'data')
 add_dir_if_exists(a, 'backend/ollama_models', 'ollama_models')
+add_dir_if_exists(a, 'backend/templates', 'templates')
 
 # Add any additional files needed by your application
 # a.binaries += [('path/to/file', 'path/in/bundle', 'DATA')]

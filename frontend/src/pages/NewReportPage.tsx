@@ -72,6 +72,23 @@ async function parseTableFileToHtml(file: File): Promise<string> {
   return '';
 }
 
+// The front-page metadata section is structured data for the DOCX title page,
+// not narrative prose. It must be passed through verbatim so the Word exporter
+// can parse "Label: value" lines to fill the front-page table, title, and
+// confidentiality statement. Sending it through the LLM turns it into prose and
+// leaves those fields blank.
+function isFrontPageMetadataSection(title: string) {
+  const normalized = title.trim().toLowerCase();
+  return normalized.includes('report metadata') || normalized.includes('front page');
+}
+
+function metadataLinesFromInputs(inputs: Record<string, any>): string {
+  return Object.entries(inputs)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+    .join('\n');
+}
+
 function PreviewTable({ html }: { html: string }) {
   return (
     <div className="mt-3">
@@ -101,6 +118,13 @@ interface Template {
   is_default: boolean;
 }
 
+interface SourceDocument {
+  id: number;
+  filename: string;
+  file_type: string;
+  uploaded_at: string;
+}
+
 interface SectionField {
   label: string;
   type:
@@ -127,6 +151,7 @@ interface TemplateSection {
 
 interface FormData {
   title: string;
+  patient_name: string;
   template: string;
   testTableEntries: TestTableEntry[];
   templateData: Record<string, any>;
@@ -140,9 +165,13 @@ export default function NewReportPage() {
   const [loading, setLoading] = useState(false);
   const [progressMessage, setProgressMessage] = useState('');
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [documents, setDocuments] = useState<SourceDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [documentsError, setDocumentsError] = useState('');
   const [templateSections, setTemplateSections] = useState<TemplateSection[]>([]);
   const [formData, setFormData] = useState<FormData>({
-    title: 'Neuropsychological Assessment',
+    title: '',
+    patient_name: '',
     template: '',
     testTableEntries: [{ type: '', customName: '', tableHtml: '', description: '', files: [] }],
     templateData: {},
@@ -153,6 +182,7 @@ export default function NewReportPage() {
 
   useEffect(() => {
     loadTemplates();
+    loadDocuments();
   }, []);
 
   const loadTemplates = async () => {
@@ -162,11 +192,30 @@ export default function NewReportPage() {
       // Set default template if available
       const defaultTemplate = data.find((t: Template) => t.is_default);
       if (defaultTemplate) {
-        setFormData(prev => ({ ...prev, template_id: defaultTemplate.id.toString() }));
+        setFormData(prev => ({
+          ...prev,
+          title: prev.title || defaultTemplate.name,
+          report_type: defaultTemplate.template_type,
+          template_id: defaultTemplate.id.toString()
+        }));
         parseTemplate(defaultTemplate.content);
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
+    }
+  };
+
+  const loadDocuments = async () => {
+    setDocumentsLoading(true);
+    setDocumentsError('');
+    try {
+      const data = await api.getDocuments();
+      setDocuments(data);
+    } catch (error) {
+      console.error('Failed to load documents:', error);
+      setDocumentsError('Source documents could not be loaded.');
+    } finally {
+      setDocumentsLoading(false);
     }
   };
 
@@ -302,10 +351,17 @@ export default function NewReportPage() {
   };
 
   const handleTemplateChange = (templateId: string) => {
-    setFormData(prev => ({ ...prev, template_id: templateId }));
     const selectedTemplate = templates.find(t => t.id.toString() === templateId);
+    setFormData(prev => ({
+      ...prev,
+      title: selectedTemplate ? selectedTemplate.name : '',
+      report_type: selectedTemplate ? selectedTemplate.template_type : '',
+      template_id: templateId
+    }));
     if (selectedTemplate) {
       parseTemplate(selectedTemplate.content);
+    } else {
+      setTemplateSections([]);
     }
   };
 
@@ -341,9 +397,30 @@ export default function NewReportPage() {
     }));
   };
 
+  const toggleDocument = (documentId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      document_ids: prev.document_ids.includes(documentId)
+        ? prev.document_ids.filter(id => id !== documentId)
+        : [...prev.document_ids, documentId]
+    }));
+  };
+
   const handleSubmit = async () => {
+    const patientName = formData.patient_name.trim();
+    if (!formData.template_id) {
+      alert('Please choose a template.');
+      return;
+    }
+    if (!patientName) {
+      alert('Please enter the patient name.');
+      return;
+    }
+
     setLoading(true);
     try {
+      const selectedTemplate = templates.find(t => t.id.toString() === formData.template_id);
+
       // Generate report section by section
       const generatedSections: Record<string, string> = {};
 
@@ -371,28 +448,34 @@ export default function NewReportPage() {
           .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
 
         if (Object.keys(sectionInputs).length > 0) {
-          // Show progress message
-          setProgressMessage(`Generating ${section.title} section...`);
+          if (isFrontPageMetadataSection(section.title)) {
+            // Structured title-page data: pass through verbatim (no LLM) so the
+            // DOCX exporter can populate the front-page table and title.
+            generatedSections[section.title] = metadataLinesFromInputs(sectionInputs);
+          } else {
+            // Show progress message
+            setProgressMessage(`Generating ${section.title} section...`);
 
-          // Call API to generate section content
-          const response = await api.generateReportSection({
-            template_id: parseInt(formData.template_id),
-            section_name: section.title,
-            document_ids: [], // TODO: Add document selection
-            section_inputs: sectionInputs
-          });
+            // Call API to generate section content
+            const response = await api.generateReportSection({
+              template_id: parseInt(formData.template_id),
+              section_name: section.title,
+              document_ids: formData.document_ids,
+              section_inputs: sectionInputs
+            });
 
-          generatedSections[section.title] = response.section_content;
+            generatedSections[section.title] = response.section_content;
+          }
         }
       }
 
       // Save the report to database
       const reportData = {
-        title: formData.title,
-        patient_name: 'Patient Name', // TODO: Add patient name field
-        report_type: 'Neuropsychological Assessment',
+        title: formData.title || selectedTemplate?.name || 'Untitled Report',
+        patient_name: patientName,
+        report_type: formData.report_type || selectedTemplate?.template_type || 'report',
         template_id: parseInt(formData.template_id),
-        document_ids: [], // TODO: Add document selection
+        document_ids: formData.document_ids,
         additional_inputs: generatedSections
       };
 
@@ -426,6 +509,7 @@ export default function NewReportPage() {
     const normalized = label.trim().toLowerCase();
     return normalized === 'languages spoken at home' || normalized === 'languages at home';
   };
+  const selectedDocuments = documents.filter(doc => formData.document_ids.includes(doc.id));
 
   return (
     <div className="p-8">
@@ -446,6 +530,96 @@ export default function NewReportPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="patient-name" className="text-white text-lg mb-3 block">
+              Patient name <span className="text-red-400">*</span>
+            </label>
+            <input
+              id="patient-name"
+              type="text"
+              className="input w-full max-w-md"
+              value={formData.patient_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, patient_name: e.target.value }))}
+              placeholder="Enter the patient's full name"
+              autoComplete="off"
+              required
+            />
+          </div>
+
+          <div className="rounded-lg border border-dark-600 bg-dark-800 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-white text-lg">Source documents</h2>
+                <p className="text-sm text-gray-400">
+                  Select uploaded documents to include in AI report generation.
+                </p>
+              </div>
+              <span className="rounded-full bg-dark-700 px-3 py-1 text-sm text-gray-200">
+                {formData.document_ids.length} selected
+              </span>
+            </div>
+
+            {documentsLoading ? (
+              <p className="text-sm text-gray-400">Loading uploaded documents...</p>
+            ) : documentsError ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-red-400">{documentsError}</p>
+                <button type="button" className="text-sm text-blue-400 hover:text-blue-300" onClick={loadDocuments}>
+                  Try again
+                </button>
+              </div>
+            ) : documents.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                No uploaded documents are available. Upload documents from the Documents page first.
+              </p>
+            ) : (
+              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {documents.map(doc => {
+                  const checked = formData.document_ids.includes(doc.id);
+                  return (
+                    <label
+                      key={doc.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded border p-3 transition-colors ${
+                        checked
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-dark-600 bg-dark-700 hover:border-dark-500'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox mt-1"
+                        checked={checked}
+                        onChange={() => toggleDocument(doc.id)}
+                      />
+                      <span className="min-w-0">
+                        <span className="block break-words text-sm text-white">{doc.filename}</span>
+                        <span className="block text-xs text-gray-400">
+                          Document #{doc.id}
+                          {doc.file_type ? ` | ${doc.file_type}` : ''}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedDocuments.length > 0 && (
+              <div className="mt-4 border-t border-dark-600 pt-3">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                  Included in this report
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedDocuments.map(doc => (
+                    <span key={doc.id} className="rounded-full bg-blue-500/20 px-3 py-1 text-sm text-blue-200">
+                      {doc.filename}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dynamic Template Form */}
@@ -1153,7 +1327,7 @@ export default function NewReportPage() {
               type="button"
               className="btn btn-primary px-16"
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || !formData.patient_name.trim() || !formData.template_id}
             >
               {loading ? 'Generating...' : 'Generate Report'}
             </button>

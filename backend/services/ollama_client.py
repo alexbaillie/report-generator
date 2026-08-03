@@ -6,8 +6,10 @@ import httpx
 from typing import Optional
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+# Default model can be overridden with the OLLAMA_MODEL env var.
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
 
-async def generate_text(prompt: str, model: str = "tinyllama", max_tokens: int = 2000) -> str:
+async def generate_text(prompt: str, model: Optional[str] = None, max_tokens: int = 2000) -> str:
     """
     Generate text using Ollama
     
@@ -19,8 +21,9 @@ async def generate_text(prompt: str, model: str = "tinyllama", max_tokens: int =
     Returns:
         Generated text
     """
+    model = model or OLLAMA_MODEL
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
                 json={

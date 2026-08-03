@@ -31,9 +31,20 @@ export const api = {
     return response.data;
   },
 
+  async updateReport(id: number, data: { title?: string; patient_name?: string; content?: string }) {
+    const response = await apiClient.put(`/reports/${id}`, data);
+    return response.data;
+  },
+
   async deleteReport(id: number) {
     const response = await apiClient.delete(`/reports/${id}`);
     return response.data;
+  },
+
+  async exportReportDocx(id: number) {
+    return apiClient.get(`/reports/${id}/export-docx`, {
+      responseType: 'blob',
+    });
   },
 
   // Documents

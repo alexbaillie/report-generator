@@ -31,10 +31,9 @@ User instruction: {prompt}
 
 Please generate the requested content in a professional format suitable for a psychological report."""
     
-    # Generate text using Ollama
+    # Generate text using Ollama (model is configured centrally in ollama_client)
     generated_text = await generate_text(
         prompt=full_prompt,
-        model="tinyllama",
         max_tokens=3000
     )
     
