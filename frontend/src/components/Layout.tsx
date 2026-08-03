@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Home, FileStack, Layout as LayoutIcon, Edit3 } from 'lucide-react';
+import { FileText, Home, FileStack, Layout as LayoutIcon, Edit3, FolderOpen } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +14,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/new-report', icon: FileText, label: 'New Report' },
     { path: '/editor', icon: Edit3, label: 'Text Editor' },
     { path: '/reports', icon: FileStack, label: 'Reports' },
+    { path: '/documents', icon: FolderOpen, label: 'Documents' },
     { path: '/templates', icon: LayoutIcon, label: 'Templates' },
   ];
 

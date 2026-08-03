@@ -189,8 +189,12 @@ export default function NewReportPage() {
     try {
       const data = await api.getTemplates();
       setTemplates(data);
-      // Set default template if available
-      const defaultTemplate = data.find((t: Template) => t.is_default);
+      // Choose the starting template: prefer the ASD assessment, then any
+      // template flagged default, then the first available.
+      const defaultTemplate =
+        data.find((t: Template) => /asd|autism/i.test(t.name)) ||
+        data.find((t: Template) => t.is_default) ||
+        data[0];
       if (defaultTemplate) {
         setFormData(prev => ({
           ...prev,
