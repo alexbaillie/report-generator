@@ -1,0 +1,687 @@
+{
+  "name": "ASD Clinical Diagnostic Assessment Report",
+  "template_type": "evaluation",
+  "is_default": true,
+  "description": "ASD clinical diagnostic assessment report",
+  "content": [
+    {
+      "title": "Report Metadata (Front Page)",
+      "fields": [
+        {
+          "label": "Report title",
+          "type": "text",
+          "placeholder": "Clinical Diagnostic Assessment Report"
+        },
+        {
+          "label": "Confidentiality statement",
+          "type": "textarea"
+        },
+        {
+          "label": "Client full name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "label": "Preferred name",
+          "type": "text"
+        },
+        {
+          "label": "Date of birth",
+          "type": "date"
+        },
+        {
+          "label": "Date(s) of evaluation",
+          "type": "date_multi",
+          "required": true
+        },
+        {
+          "label": "Date of report",
+          "type": "date"
+        },
+        {
+          "label": "Chronological age",
+          "type": "text"
+        },
+        {
+          "label": "Examiner",
+          "type": "text"
+        },
+        {
+          "label": "Credentials",
+          "type": "text",
+          "placeholder": "PhD, RPsych"
+        },
+        {
+          "label": "Copies to",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Reason for Referral",
+      "fields": [
+        {
+          "label": "Referral source",
+          "type": "text"
+        },
+        {
+          "label": "Referral support or referring team",
+          "type": "text"
+        },
+        {
+          "label": "Assessment location",
+          "type": "text"
+        },
+        {
+          "label": "City/province",
+          "type": "text"
+        },
+        {
+          "label": "Contracting clinic or program",
+          "type": "text",
+          "placeholder": "Compass Clinic"
+        },
+        {
+          "label": "Primary referral question",
+          "type": "select",
+          "options": [
+            "Autism assessment",
+            "Autism and ADHD assessment",
+            "Developmental diagnostic assessment",
+            "Other"
+          ]
+        },
+        {
+          "label": "Presenting history summary",
+          "type": "textarea"
+        },
+        {
+          "label": "Sources of information",
+          "type": "checkboxes",
+          "options": [
+            "File review",
+            "Standardized tests",
+            "Parent questionnaires",
+            "Teacher questionnaires",
+            "Direct observation",
+            "Child interview",
+            "Parent interview",
+            "School records",
+            "Previous assessment reports",
+            "Other"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Summary & Conclusions",
+      "fields": [
+        {
+          "label": "Child age and brief referral summary",
+          "type": "textarea"
+        },
+        {
+          "label": "Key social interaction concerns",
+          "type": "textarea"
+        },
+        {
+          "label": "Key sensory sensitivities",
+          "type": "textarea"
+        },
+        {
+          "label": "Key intense interests",
+          "type": "textarea"
+        },
+        {
+          "label": "Key rigidity or sameness concerns",
+          "type": "textarea"
+        },
+        {
+          "label": "Previous diagnoses",
+          "type": "textarea"
+        },
+        {
+          "label": "Historical summary from ADI-R or records",
+          "type": "textarea"
+        },
+        {
+          "label": "Direct assessment and interview summary",
+          "type": "textarea"
+        },
+        {
+          "label": "Diagnostic conclusion",
+          "type": "select",
+          "options": [
+            "Meets criteria for ASD",
+            "Does not meet criteria for ASD",
+            "Deferred or inconclusive",
+            "Other"
+          ]
+        },
+        {
+          "label": "Other diagnoses to discuss",
+          "type": "textarea"
+        },
+        {
+          "label": "Child strengths and protective factors",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "ASD Diagnostic Criteria",
+      "fields": [
+        {
+          "label": "Social communication support level",
+          "type": "select",
+          "options": [
+            "Level 1: Requiring support",
+            "Level 2: Requiring substantial support",
+            "Level 3: Requiring very substantial support"
+          ]
+        },
+        {
+          "label": "Restricted/repetitive behaviour support level",
+          "type": "select",
+          "options": [
+            "Level 1: Requiring support",
+            "Level 2: Requiring substantial support",
+            "Level 3: Requiring very substantial support"
+          ]
+        },
+        {
+          "label": "Social-emotional reciprocity evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Nonverbal communication evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Relationships evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Stereotyped or repetitive behaviours evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Insistence on sameness or routines evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Restricted or fixated interests evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "Sensory reactivity evidence",
+          "type": "textarea"
+        },
+        {
+          "label": "DSM-5-TR diagnosis wording",
+          "type": "textarea",
+          "placeholder": "F84.0, with/without accompanying intellectual impairment, with/without accompanying language impairment..."
+        }
+      ]
+    },
+    {
+      "title": "Diagnostic Considerations",
+      "fields": [
+        {
+          "label": "Include subtle presentation discussion",
+          "type": "checkbox"
+        },
+        {
+          "label": "Subtle presentation details",
+          "type": "textarea"
+        },
+        {
+          "label": "Include AuDHD discussion",
+          "type": "checkbox"
+        },
+        {
+          "label": "AuDHD details",
+          "type": "textarea"
+        },
+        {
+          "label": "Include pathological demand avoidance discussion",
+          "type": "checkbox"
+        },
+        {
+          "label": "PDA details",
+          "type": "textarea"
+        },
+        {
+          "label": "Include gifted/ADHD/autism discussion",
+          "type": "checkbox"
+        },
+        {
+          "label": "Gifted/ADHD/autism details",
+          "type": "textarea"
+        },
+        {
+          "label": "Relevant descriptors and diagnoses",
+          "type": "table",
+          "placeholder": "Code, Diagnosis/descriptor, Notes"
+        }
+      ]
+    },
+    {
+      "title": "Highlighted Recommendations",
+      "fields": [
+        {
+          "label": "First-step recommendations",
+          "type": "textarea"
+        },
+        {
+          "label": "Key follow-up meetings",
+          "type": "textarea"
+        },
+        {
+          "label": "Autism supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Mental health supports",
+          "type": "textarea"
+        },
+        {
+          "label": "ADHD supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Other priority resources",
+          "type": "textarea"
+        },
+        {
+          "label": "Future assessments",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Goals for the Present Assessment",
+      "fields": [
+        {
+          "label": "Assessment goals",
+          "type": "textarea"
+        },
+        {
+          "label": "Questions to answer",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Presenting Concerns",
+      "fields": [
+        {
+          "label": "Attention and executive functioning",
+          "type": "textarea"
+        },
+        {
+          "label": "Anxiety",
+          "type": "textarea"
+        },
+        {
+          "label": "Communication and socialization",
+          "type": "textarea"
+        },
+        {
+          "label": "Behaviour",
+          "type": "textarea"
+        },
+        {
+          "label": "Learning",
+          "type": "textarea"
+        },
+        {
+          "label": "Areas of relative strength and interests",
+          "type": "textarea"
+        },
+        {
+          "label": "Effective parent/school strategies",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Family History",
+      "fields": [
+        {
+          "label": "Living situation",
+          "type": "textarea"
+        },
+        {
+          "label": "Home language and ESL information",
+          "type": "textarea"
+        },
+        {
+          "label": "Parent education and occupations",
+          "type": "textarea"
+        },
+        {
+          "label": "Recent or current family stressors",
+          "type": "textarea"
+        },
+        {
+          "label": "Family history of learning or mental health conditions",
+          "type": "textarea"
+        },
+        {
+          "label": "Other relevant family information",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Developmental & Medical History",
+      "fields": [
+        {
+          "label": "Pregnancy and birth information",
+          "type": "textarea"
+        },
+        {
+          "label": "Early infancy information",
+          "type": "textarea"
+        },
+        {
+          "label": "Developmental milestones",
+          "type": "textarea"
+        },
+        {
+          "label": "Hearing and vision testing",
+          "type": "textarea"
+        },
+        {
+          "label": "Major illness, injury, seizures, or fevers",
+          "type": "textarea"
+        },
+        {
+          "label": "Medication history and current medications",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Educational History",
+      "fields": [
+        {
+          "label": "Current school, grade, and program",
+          "type": "textarea"
+        },
+        {
+          "label": "Designation and current school supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Current IEP goals",
+          "type": "textarea"
+        },
+        {
+          "label": "School extracurricular programs",
+          "type": "textarea"
+        },
+        {
+          "label": "Current tutoring or outside academic supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Previous schools and programming",
+          "type": "textarea"
+        },
+        {
+          "label": "Previous school concerns",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Previous Assessments & Interventions",
+      "fields": [
+        {
+          "label": "Previous assessments",
+          "type": "table",
+          "placeholder": "Assessment, Provider, Location, Date/Age, Key findings, Diagnoses/recommendations"
+        },
+        {
+          "label": "Previous interventions",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Tests Administered",
+      "fields": [
+        {
+          "label": "Tests administered",
+          "type": "checkboxes",
+          "options": [
+            "ABAS-3",
+            "ADOS-2",
+            "ADI-R",
+            "BASC-3",
+            "MIGDAS-2",
+            "SRS-2",
+            "Weiss Symptom Record-2",
+            "CAT-Q",
+            "Other"
+          ]
+        },
+        {
+          "label": "Other tests or questionnaires",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "General Behavioural Observations",
+      "fields": [
+        {
+          "label": "Session context",
+          "type": "textarea"
+        },
+        {
+          "label": "Attention and regulation observations",
+          "type": "textarea"
+        },
+        {
+          "label": "Communication observations",
+          "type": "textarea"
+        },
+        {
+          "label": "Social interaction observations",
+          "type": "textarea"
+        },
+        {
+          "label": "Restricted/repetitive behaviour observations",
+          "type": "textarea"
+        },
+        {
+          "label": "Other observations",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Autism Characteristics",
+      "fields": [
+        {
+          "label": "ADOS-2 module",
+          "type": "select",
+          "options": [
+            "Module 1",
+            "Module 2",
+            "Module 3",
+            "Module 4",
+            "Not administered"
+          ]
+        },
+        {
+          "label": "Social affect summary",
+          "type": "textarea"
+        },
+        {
+          "label": "Communication",
+          "type": "textarea"
+        },
+        {
+          "label": "Reciprocal social interaction",
+          "type": "textarea"
+        },
+        {
+          "label": "Restricted and repetitive behaviour",
+          "type": "textarea"
+        },
+        {
+          "label": "Other behaviours",
+          "type": "textarea"
+        },
+        {
+          "label": "Interview with child",
+          "type": "textarea"
+        },
+        {
+          "label": "ADI-R social interaction",
+          "type": "textarea"
+        },
+        {
+          "label": "ADI-R communication",
+          "type": "textarea"
+        },
+        {
+          "label": "ADI-R behaviour",
+          "type": "textarea"
+        },
+        {
+          "label": "Age of first concerns",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Rating Scales & Adaptive Behaviour",
+      "fields": [
+        {
+          "label": "SRS-2 results",
+          "type": "table",
+          "placeholder": "Subscale, Parent description, Teacher description"
+        },
+        {
+          "label": "CAT-Q results",
+          "type": "table",
+          "placeholder": "Subscale, Description"
+        },
+        {
+          "label": "ABAS-3 results",
+          "type": "table",
+          "placeholder": "Scale, Parent score, Parent description, School score, School description"
+        },
+        {
+          "label": "BASC-3 parent/teacher results",
+          "type": "table",
+          "placeholder": "Scale, Parent report, School report"
+        },
+        {
+          "label": "BASC-3 self-report results",
+          "type": "table",
+          "placeholder": "Scale, Self-report"
+        },
+        {
+          "label": "Adaptive behaviour interpretation",
+          "type": "textarea"
+        },
+        {
+          "label": "Social-emotional functioning interpretation",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Additional Recommendations",
+      "fields": [
+        {
+          "label": "Medical recommendations",
+          "type": "textarea"
+        },
+        {
+          "label": "Developmental/educational supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Speech and language therapy",
+          "type": "textarea"
+        },
+        {
+          "label": "Occupational therapy",
+          "type": "textarea"
+        },
+        {
+          "label": "Counselling",
+          "type": "textarea"
+        },
+        {
+          "label": "Behavioural intervention",
+          "type": "textarea"
+        },
+        {
+          "label": "Social skills training",
+          "type": "textarea"
+        },
+        {
+          "label": "Autism-focused intervention priorities",
+          "type": "textarea"
+        },
+        {
+          "label": "School-based programming recommendations",
+          "type": "textarea"
+        },
+        {
+          "label": "School support suggestions",
+          "type": "textarea"
+        },
+        {
+          "label": "Pathological demand avoidance strategies",
+          "type": "textarea"
+        },
+        {
+          "label": "Anxiety, rigidity, and social skill strategies",
+          "type": "textarea"
+        },
+        {
+          "label": "Community/family supports",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Appendices",
+      "fields": [
+        {
+          "label": "Appendix 1: Interpretation of test results",
+          "type": "textarea"
+        },
+        {
+          "label": "Appendix 2: Additional autism resources",
+          "type": "textarea"
+        },
+        {
+          "label": "ADHD and executive functioning resources",
+          "type": "textarea"
+        },
+        {
+          "label": "Healthy screen time and technology recommendations",
+          "type": "textarea"
+        },
+        {
+          "label": "Staying safe online recommendations",
+          "type": "textarea"
+        },
+        {
+          "label": "Appendix 3: Additional books/resources",
+          "type": "textarea"
+        }
+      ]
+    }
+  ]
+}
