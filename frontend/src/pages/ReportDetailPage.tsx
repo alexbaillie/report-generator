@@ -33,8 +33,10 @@ export default function ReportDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // The backend only has a Word template wired up for ASD/autism reports.
-  const canExport = !!report && /asd|autism/i.test(report.title);
+  // Word templates are wired up for ASD/autism and Sunny Hill CDBC reports.
+  const canExport =
+    !!report &&
+    (/asd|autism|cdbc|sunny\s*hill/i.test(report.title) || report.report_type === 'cdbc');
 
   const startEditing = () => {
     if (!report) return;
@@ -227,7 +229,7 @@ export default function ReportDetailPage() {
           <div>Last edited: {new Date(report.updated_at).toLocaleString()}</div>
           {!canExport && !editing && (
             <div className="mt-1 text-gray-500">
-              Word export is available for ASD/autism reports only.
+              Word export is available for ASD and Sunny Hill CDBC reports only.
             </div>
           )}
         </div>

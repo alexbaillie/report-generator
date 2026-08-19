@@ -13,11 +13,10 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from lxml import etree
 
 
-ASD_TEMPLATE_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "templates"
-    / "asd_school_age_boy_template.docx"
-)
+_TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
+ASD_TEMPLATE_PATH = _TEMPLATE_DIR / "asd_school_age_boy_template.docx"
+CDBC_BOY_TEMPLATE_PATH = _TEMPLATE_DIR / "sunnyhill_cdbc_boy_template.docx"
+CDBC_GIRL_TEMPLATE_PATH = _TEMPLATE_DIR / "sunnyhill_cdbc_girl_template.docx"
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -60,9 +59,62 @@ FRONT_TABLE_LABELS: Mapping[str, Sequence[str]] = {
 }
 
 
+# The Sunny Hill CDBC template uses ALL-CAPS/bold headings and a paragraph-based
+# (not table) front page. Map each generated report section to the heading in the
+# Word template whose following content it should replace.
+CDBC_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
+    ("diagnostic summary (dsm-5-tr)", ("DIAGNOSTIC SUMMARY (DSM-5-TR)",)),
+    ("summary of findings", ("SUMMARY OF FINDINGS",)),
+    ("summary of assessment results", ("Summary of Assessment Results",)),
+    ("highlighted recommendations", ("RECOMMENDATIONS",)),
+    ("resources", ("RESOURCES",)),
+    ("reason for referral", ("REASON FOR REFERRAL",)),
+    ("sources of information", ("SOURCES OF INFORMATION",)),
+    ("presenting concerns (as provided by parents)", ("Presenting Concerns as provided by parents",)),
+    ("areas of relative strength & interests", ("Areas of Relative Strength and Interests",)),
+    ("family history", ("Family History",)),
+    ("developmental & medical history", ("Developmental & Medical History",)),
+    ("educational history", ("Educational History",)),
+    ("previous assessments & interventions", ("Previous Assessments & Interventions",)),
+    ("behavioural observations", ("BEHAVIOURAL OBSERVATIONS",)),
+    ("tests administered", ("TESTS ADMINISTERED",)),
+    ("cognitive, memory & academic results", ("General Cognitive Abilities",)),
+)
+
+
+# Front-page paragraphs like "DATE OF BIRTH:" get the metadata value appended.
+CDBC_FRONT_LABELS: Mapping[str, Sequence[str]] = {
+    "chart number": ("chart number",),
+    "date of birth": ("date of birth",),
+    "date of assessment": ("date(s) of assessment", "dates of assessment", "date of assessment"),
+    "age at assessment": ("age at assessment", "chronological age"),
+    "date of report": ("date of report",),
+    "date of conference": ("date of conference",),
+}
+
+
 def supports_asd_template(title: str) -> bool:
     normalized = _normalize(title)
     return "asd" in normalized or "autism" in normalized
+
+
+def supports_cdbc_template(title: str) -> bool:
+    normalized = _normalize(title)
+    return "cdbc" in normalized or "sunny hill" in normalized or "sunnyhill" in normalized
+
+
+def supports_export(title: str) -> bool:
+    return supports_asd_template(title) or supports_cdbc_template(title)
+
+
+def _select_profile(title: str):
+    """Return (template_path, section_targets, front_page_filler) for the title."""
+    if supports_cdbc_template(title):
+        template = CDBC_GIRL_TEMPLATE_PATH if "girl" in _normalize(title) else CDBC_BOY_TEMPLATE_PATH
+        return template, CDBC_SECTION_TARGETS, _fill_front_page_cdbc
+    if supports_asd_template(title):
+        return ASD_TEMPLATE_PATH, ASD_SECTION_TARGETS, _fill_front_page_asd
+    return None
 
 
 def export_filename(title: str) -> str:
@@ -101,20 +153,28 @@ def create_report_docx(
     content: str,
 ) -> BytesIO:
     del report_type  # The configured template controls the document type.
-    if not supports_asd_template(title):
+    profile = _select_profile(title)
+    if profile is None:
         raise DocxExportError("A Word template is not configured for this report type.")
-    if not ASD_TEMPLATE_PATH.is_file():
-        raise DocxExportError("The ASD Word template is missing from the application.")
+    template_path, section_targets, fill_front_page = profile
+    if not template_path.is_file():
+        raise DocxExportError("The Word template for this report type is missing from the application.")
 
-    with ZipFile(ASD_TEMPLATE_PATH, "r") as source:
+    with ZipFile(template_path, "r") as source:
         document_xml = source.read("word/document.xml")
 
     root = etree.fromstring(document_xml)
     sections = parse_markdown_sections(content)
     metadata = _extract_labeled_values(sections.get("report metadata (front page)", ""))
 
-    _fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
-    _fill_generated_sections(root, sections)
+    fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
+    _fill_generated_sections(root, sections, section_targets)
+
+    # Make the leftover template boilerplate readable: use the real name instead
+    # of the "Jane/Joe Lastname" placeholders, and drop instructional highlighting.
+    clean_name = _clean_name(metadata.get("client full name") or metadata.get("name") or patient_name)
+    _replace_placeholder_names(root, clean_name)
+    _strip_highlighting(root)
 
     patched_xml = etree.tostring(
         root,
@@ -122,12 +182,12 @@ def create_report_docx(
         xml_declaration=True,
         standalone=True,
     )
-    return _write_patched_package(patched_xml)
+    return _write_patched_package(patched_xml, template_path)
 
 
-def _write_patched_package(document_xml: bytes) -> BytesIO:
+def _write_patched_package(document_xml: bytes, template_path: Path) -> BytesIO:
     output = BytesIO()
-    with ZipFile(ASD_TEMPLATE_PATH, "r") as source, ZipFile(
+    with ZipFile(template_path, "r") as source, ZipFile(
         output, "w", compression=ZIP_DEFLATED
     ) as destination:
         for info in source.infolist():
@@ -137,7 +197,7 @@ def _write_patched_package(document_xml: bytes) -> BytesIO:
     return output
 
 
-def _fill_front_page(
+def _fill_front_page_asd(
     root,
     *,
     title: str,
@@ -180,16 +240,67 @@ def _fill_front_page(
         _set_cell_text(cell, f"{label_text}: {value}")
 
 
-def _fill_generated_sections(root, sections: Mapping[str, str]) -> None:
+def _fill_front_page_cdbc(
+    root,
+    *,
+    title: str,
+    patient_name: str,
+    metadata: Mapping[str, str],
+) -> None:
+    paragraphs = root.xpath("/w:document/w:body/w:p", namespaces=NS)
+
+    report_title = metadata.get("report title")
+    if report_title:
+        for paragraph in paragraphs:
+            if _normalize(_element_text(paragraph)) == "psychology assessment report":
+                _set_element_text(paragraph, report_title)
+                break
+
+    # The client's name is a stand-alone ALL-CAPS paragraph like "JANE LASTNAME".
+    name = metadata.get("client full name") or metadata.get("name")
+    if (not name) and patient_name and _normalize(patient_name) not in {"", "patient name"}:
+        name = patient_name
+    if name:
+        for paragraph in paragraphs:
+            normalized = _normalize(_element_text(paragraph))
+            if normalized.endswith("lastname") and ":" not in normalized:
+                _set_element_text(paragraph, name.upper())
+                break
+        # Swap the placeholder name inside the confidentiality sentence too.
+        for paragraph in paragraphs:
+            text = _element_text(paragraph)
+            if _normalize(text).startswith("this is a confidential report"):
+                swapped = re.sub(r"(?i)\b(?:jane|joe)\s+lastname\b", name, text)
+                if swapped != text:
+                    _set_element_text(paragraph, swapped)
+                break
+
+    # Labelled front-page paragraphs ("DATE OF BIRTH:") get their value appended.
+    for paragraph in paragraphs:
+        text = _element_text(paragraph).strip()
+        if ":" not in text:
+            continue
+        source_label = _normalize(text.split(":", 1)[0])
+        aliases = CDBC_FRONT_LABELS.get(source_label)
+        if not aliases:
+            continue
+        value = _first_value(metadata, aliases)
+        if not value:
+            continue
+        label_text = text.split(":", 1)[0].strip()
+        _set_element_text(paragraph, f"{label_text}: {value}")
+
+
+def _fill_generated_sections(root, sections: Mapping[str, str], section_targets) -> None:
     body = root.find(f"{{{W_NS}}}body")
     if body is None:
-        raise DocxExportError("The ASD Word template has no document body.")
+        raise DocxExportError("The Word template has no document body.")
 
     paragraphs = body.xpath("./w:p", namespaces=NS)
     located: List[Tuple[int, str, object]] = []
     children = list(body)
 
-    for section_name, aliases in ASD_SECTION_TARGETS:
+    for section_name, aliases in section_targets:
         paragraph = _find_paragraph(paragraphs, aliases)
         if paragraph is not None:
             located.append((children.index(paragraph), section_name, paragraph))
@@ -225,6 +336,48 @@ def _fill_generated_sections(root, sections: Mapping[str, str]) -> None:
             new_paragraph = _paragraph_element(style_source, block)
             anchor.addnext(new_paragraph)
             anchor = new_paragraph
+
+
+def _clean_name(name: str) -> str:
+    """Patient name for substitution — parentheticals like "(test)" removed."""
+    name = re.sub(r"\s*\(.*?\)\s*", " ", name or "").strip()
+    if _normalize(name) in {"", "patient name"}:
+        return ""
+    return name
+
+
+def _replace_placeholder_names(root, full_name: str) -> None:
+    """Swap the template's "Jane/Joe Lastname" placeholders for the real name
+    throughout the document, preserving ALL-CAPS styling where used."""
+    if not full_name:
+        return
+    parts = full_name.split()
+    first, last = parts[0], (parts[-1] if len(parts) > 1 else "")
+
+    def _cased(match, replacement):
+        return replacement.upper() if match.group(0).isupper() else replacement
+
+    for node in root.iter(f"{{{W_NS}}}t"):
+        if not node.text:
+            continue
+        text = re.sub(r"(?i)\b(?:jane|joe)\s+lastname\b", lambda m: _cased(m, full_name), node.text)
+        text = re.sub(r"(?i)\b(?:jane|joe)\b", lambda m: _cased(m, first), text)
+        if last:
+            text = re.sub(r"(?i)\blastname\b", lambda m: _cased(m, last), text)
+        if text != node.text:
+            node.text = text
+
+
+def _strip_highlighting(root) -> None:
+    """Remove text highlighting and run-level shading (the yellow placeholder marks)."""
+    for highlight in list(root.iter(f"{{{W_NS}}}highlight")):
+        parent = highlight.getparent()
+        if parent is not None:
+            parent.remove(highlight)
+    for shading in list(root.iter(f"{{{W_NS}}}shd")):
+        parent = shading.getparent()
+        if parent is not None and parent.tag == f"{{{W_NS}}}rPr":
+            parent.remove(shading)
 
 
 def _extract_labeled_values(text: str) -> Dict[str, str]:
