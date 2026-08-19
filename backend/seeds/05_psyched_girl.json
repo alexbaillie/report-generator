@@ -1,0 +1,517 @@
+{
+  "name": "Psycho-Educational Assessment - Girl",
+  "template_type": "psychoeducational",
+  "is_default": false,
+  "description": "Psycho-educational assessment report (girl)",
+  "content": [
+    {
+      "title": "Report Metadata (Front Page)",
+      "fields": [
+        {
+          "label": "Report title",
+          "type": "text",
+          "placeholder": "Psycho-Educational Assessment Report"
+        },
+        {
+          "label": "Confidentiality statement",
+          "type": "textarea"
+        },
+        {
+          "label": "Client full name",
+          "type": "text"
+        },
+        {
+          "label": "Preferred name",
+          "type": "text"
+        },
+        {
+          "label": "Date of birth",
+          "type": "date"
+        },
+        {
+          "label": "Date(s) of assessment",
+          "type": "date_multi"
+        },
+        {
+          "label": "Date of report",
+          "type": "date"
+        },
+        {
+          "label": "Date of conference",
+          "type": "date"
+        },
+        {
+          "label": "Chronological age",
+          "type": "text"
+        },
+        {
+          "label": "Examiner",
+          "type": "text"
+        },
+        {
+          "label": "Credentials",
+          "type": "text"
+        },
+        {
+          "label": "Assessment team",
+          "type": "textarea"
+        },
+        {
+          "label": "Copies to",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "title": "Reason for Referral",
+      "fields": [
+        {
+          "label": "Referral source and reason",
+          "type": "textarea"
+        },
+        {
+          "label": "Presenting concerns summary",
+          "type": "textarea"
+        },
+        {
+          "label": "Purpose of the assessment",
+          "type": "textarea"
+        },
+        {
+          "label": "Sources of information",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Presenting Concerns (as reported by parents)",
+      "fields": [
+        {
+          "label": "Attention",
+          "type": "textarea",
+          "placeholder": "organization, hyperactivity, focus, planning, distractibility, following instructions"
+        },
+        {
+          "label": "Anxiety",
+          "type": "textarea"
+        },
+        {
+          "label": "Communication / Socialization",
+          "type": "textarea"
+        },
+        {
+          "label": "Behaviour",
+          "type": "textarea",
+          "placeholder": "frustration triggers, aggression, eating, sensory issues"
+        },
+        {
+          "label": "Learning",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Teacher's Perspective",
+      "fields": [
+        {
+          "label": "Teacher's note (optional)",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Child's Perspective",
+      "fields": [
+        {
+          "label": "Child's perspective (optional)",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Areas of Relative Strength & Interests",
+      "fields": [
+        {
+          "label": "Reported strengths",
+          "type": "textarea"
+        },
+        {
+          "label": "Interests and hobbies",
+          "type": "textarea"
+        },
+        {
+          "label": "Recreational / community programs",
+          "type": "textarea"
+        },
+        {
+          "label": "Effective strategies parents have found",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Family History",
+      "fields": [
+        {
+          "label": "Where the child lives / who they live with",
+          "type": "text"
+        },
+        {
+          "label": "Language of the home / ESL",
+          "type": "text"
+        },
+        {
+          "label": "Parent education and occupations",
+          "type": "textarea"
+        },
+        {
+          "label": "Recent / current family stressors",
+          "type": "textarea"
+        },
+        {
+          "label": "Family history of learning or mental-health conditions",
+          "type": "textarea"
+        },
+        {
+          "label": "Other relevant information",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Developmental & Medical History",
+      "fields": [
+        {
+          "label": "Pregnancy and birth information",
+          "type": "textarea"
+        },
+        {
+          "label": "Early infancy information",
+          "type": "textarea"
+        },
+        {
+          "label": "Developmental milestones",
+          "type": "textarea"
+        },
+        {
+          "label": "Hearing and vision testing",
+          "type": "textarea"
+        },
+        {
+          "label": "Major illness, head injury, seizures, fevers",
+          "type": "textarea"
+        },
+        {
+          "label": "Medication history and current use",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Educational History",
+      "fields": [
+        {
+          "label": "Current school, grade, and program",
+          "type": "text"
+        },
+        {
+          "label": "Designation and current supports (e.g., LAC)",
+          "type": "text"
+        },
+        {
+          "label": "Most recent IEP major goals",
+          "type": "textarea"
+        },
+        {
+          "label": "Extra-curricular programs at school",
+          "type": "textarea"
+        },
+        {
+          "label": "Current extra-curricular tutoring",
+          "type": "textarea"
+        },
+        {
+          "label": "Previous schools and programming",
+          "type": "textarea"
+        },
+        {
+          "label": "Previous school concerns",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Previous Assessments & Interventions",
+      "fields": [
+        {
+          "label": "Previous assessments",
+          "type": "table",
+          "placeholder": "Type, Clinician, Location, Date/Age, Key findings, Diagnoses/recommendations"
+        },
+        {
+          "label": "Previous interventions",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Tests Administered",
+      "fields": [
+        {
+          "label": "Tests administered",
+          "type": "checkboxes",
+          "options": [
+            "ABAS-3",
+            "Achenbach (CBCL/TRF/YSR)",
+            "ADHD-5 Rating Scales",
+            "ASRS",
+            "BASC-3",
+            "Bayley-4",
+            "Beery VMI-6",
+            "BRIEF-2",
+            "BRIEF-P",
+            "Bracken-3:R",
+            "CEFI",
+            "CCTT",
+            "CVLT-C",
+            "D-KEFS",
+            "DAS-II",
+            "Feifer (Reading/Math/Writing)",
+            "NEPSY-II",
+            "PPVT-4",
+            "MASC-2",
+            "Rey Complex Figure",
+            "SCARED",
+            "SIB-R",
+            "CTOPP-2",
+            "WASI",
+            "WAIS-IV",
+            "WIAT-III / WIAT-4",
+            "WISC-V",
+            "WNV",
+            "WPPSI-IV",
+            "WRAML-3",
+            "WSR-II",
+            "Vanderbilt",
+            "Vineland-3",
+            "KTEA-3",
+            "GORT-5",
+            "TOWL-4",
+            "Other"
+          ]
+        },
+        {
+          "label": "Other tests or questionnaires",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Behavioural Observations",
+      "fields": [
+        {
+          "label": "Behavioural observations",
+          "type": "textarea",
+          "placeholder": "presentation, glasses/medication, rapport, attention, language used"
+        }
+      ]
+    },
+    {
+      "title": "Cognitive & Neuropsychological Results",
+      "fields": [
+        {
+          "label": "Cognitive score table (WPPSI / WISC / WAIS)",
+          "type": "table",
+          "placeholder": "Index/Subtest, Score, Percentile, Range"
+        },
+        {
+          "label": "General cognitive interpretation",
+          "type": "textarea"
+        },
+        {
+          "label": "Memory score table (WRAML-3 / CVLT-C)",
+          "type": "table",
+          "placeholder": "Index, Score, Percentile, Range"
+        },
+        {
+          "label": "Memory interpretation",
+          "type": "textarea"
+        },
+        {
+          "label": "Visual-motor integration (VMI / Rey Complex Figure)",
+          "type": "textarea"
+        },
+        {
+          "label": "Executive functioning (NEPSY-II, D-KEFS, BRIEF-2)",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Academic Achievement",
+      "fields": [
+        {
+          "label": "Academic score table (WIAT / KTEA)",
+          "type": "table",
+          "placeholder": "Subtest, Score, Percentile, Range"
+        },
+        {
+          "label": "Reading",
+          "type": "textarea"
+        },
+        {
+          "label": "Mathematics",
+          "type": "textarea"
+        },
+        {
+          "label": "Written expression",
+          "type": "textarea"
+        },
+        {
+          "label": "Phonological processing (CTOPP-2)",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Adaptive, Behavioural & Social-Emotional Functioning",
+      "fields": [
+        {
+          "label": "Adaptive behaviour (ABAS-3)",
+          "type": "table",
+          "placeholder": "Scale, Parent, Teacher"
+        },
+        {
+          "label": "Adaptive functioning interpretation",
+          "type": "textarea"
+        },
+        {
+          "label": "Behaviour rating scales (BASC-3, ASEBA)",
+          "type": "textarea"
+        },
+        {
+          "label": "Anxiety measures (SCARED, MASC-2)",
+          "type": "textarea"
+        },
+        {
+          "label": "ADHD measures (WSR-II, ADHD-5)",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Summary of Assessment Results",
+      "fields": [
+        {
+          "label": "General cognitive abilities",
+          "type": "textarea"
+        },
+        {
+          "label": "Adaptive functioning",
+          "type": "textarea"
+        },
+        {
+          "label": "School achievement",
+          "type": "textarea"
+        },
+        {
+          "label": "Visual-motor integration",
+          "type": "textarea"
+        },
+        {
+          "label": "Memory",
+          "type": "textarea"
+        },
+        {
+          "label": "Attention",
+          "type": "textarea"
+        },
+        {
+          "label": "Executive functioning",
+          "type": "textarea"
+        },
+        {
+          "label": "Behavioural, social, and emotional functioning",
+          "type": "textarea"
+        },
+        {
+          "label": "Relative strengths",
+          "type": "textarea"
+        },
+        {
+          "label": "Relative weaknesses / areas for improvement",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Diagnoses (DSM-5-TR)",
+      "fields": [
+        {
+          "label": "Descriptors / diagnoses (DSM-5-TR)",
+          "type": "table",
+          "placeholder": "Code, Diagnosis/descriptor, Notes"
+        },
+        {
+          "label": "Developmental domains impacted",
+          "type": "textarea",
+          "placeholder": "Physical, Communication, Social-Emotional, Academic, Self-Determination — none/mild/moderate/complex"
+        }
+      ]
+    },
+    {
+      "title": "Highlighted Recommendations",
+      "fields": [
+        {
+          "label": "Top 3–5 recommendations",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "title": "Recommendations",
+      "fields": [
+        {
+          "label": "Follow-up meetings (doctor, school)",
+          "type": "textarea"
+        },
+        {
+          "label": "Community support programs",
+          "type": "textarea"
+        },
+        {
+          "label": "School programming and classroom placement",
+          "type": "textarea"
+        },
+        {
+          "label": "Academic strategies (reading, math, writing, spelling)",
+          "type": "textarea"
+        },
+        {
+          "label": "Home and classroom strategies",
+          "type": "textarea"
+        },
+        {
+          "label": "Organization and technology supports",
+          "type": "textarea"
+        },
+        {
+          "label": "Social skills and emotional support",
+          "type": "textarea"
+        },
+        {
+          "label": "Self-regulation, anxiety, anger / frustration",
+          "type": "textarea"
+        },
+        {
+          "label": "Sleep, exercise, and other",
+          "type": "textarea"
+        },
+        {
+          "label": "Follow-up / reassessment",
+          "type": "textarea"
+        }
+      ]
+    }
+  ]
+}

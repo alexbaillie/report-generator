@@ -1,0 +1,7 @@
+{
+  "name": "Standard Intake Assessment",
+  "template_type": "evaluation",
+  "is_default": false,
+  "description": "Standard intake / neuropsychological assessment (legacy text template)",
+  "content": "Generate a professional neuropsychological report following this exact structure:\n\nPsych Report Template\n\nPATIENT\nName:\nChart number:\nDate of birth:\nDate of assessment:\nAge at assessment:\t\nDate of conference:\t\nLegal guardian:\t\n\t\t\nTEAM\nDevelopmental Pediatrician:\t\nPsychologist:\t\nAssessing Clinician:\t\nSpeech Language Pathologist:\t\nSocial worker:\t\nCase manager:   \n\nCONTENTS\n\nSUMMARIES\nDiagnostic summary:\nSummary of findings:\n\nRECOMMENDATIONS FOR SERVICE\n\nSTRATEGIES\nAllowances:\nAccommodations:\nInstructional Strategies:\n\nSUPPORTING INFORMATION\nReason for referral:\nSources of information:\nBackground information:\n- Presenting concerns (as provided by...)\n- Family History\n- Developmental and Medical History\n- Educational History\n- Previous Schools and Programming\n- Previous Assessments & Interventions\nBehavioural Observations:\nTests administered:\nParent/teacher report measures administered:\nInformation on the interpretation of test scores:\n\nAPPENDICES \n\nPlease fill in each section with appropriate content based on the provided documents and additional information. Use professional psychological terminology and ensure the report is comprehensive and clinically accurate."
+}
