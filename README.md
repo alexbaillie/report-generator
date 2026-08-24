@@ -6,7 +6,7 @@ A local-first desktop application for generating psychological reports using loc
 
 - 📝 Generate psychological reports from session notes and test results
 - 🔒 Local-first (offline by default) with local storage
-- 🤖 AI-powered report generation using Ollama (TinyLLaMA)
+- 🤖 AI-powered report generation using Ollama (Llama 3.1 8B)
 - 📄 Document upload and processing
 - 💾 Local SQLite database (encryption is planned)
 - 🎨 Modern UI built with React and TailwindCSS
@@ -17,7 +17,7 @@ A local-first desktop application for generating psychological reports using loc
 - **Desktop**: Electron
 - **Backend**: FastAPI (Python)
 - **Database**: SQLite (encryption planned)
-- **AI**: Ollama (TinyLLaMA model)
+- **AI**: Ollama (Llama 3.1 8B model)
 - **Testing**: Jest, React Testing Library, Pytest
 
 ## Prerequisites
@@ -28,15 +28,15 @@ A local-first desktop application for generating psychological reports using loc
 
 ## Installation
 
-### 1. Install Ollama and TinyLLaMA model (development)
+### 1. Install Ollama and the Llama 3.1 8B model (development)
 
 ```bash
 # Install Ollama from https://ollama.ai
-# Then pull the TinyLLaMA model
-ollama pull tinyllama
+# Then pull the model
+ollama pull llama3.1:8b
 ```
 
-For packaged desktop builds (the Windows installer), the Ollama runtime is bundled with the app. If the model is missing, the app will prompt the user to download `tinyllama` (requires internet) or import an offline models folder.
+For packaged desktop builds (the Windows installer), the Ollama runtime is bundled with the app. If the model is missing, the app will prompt the user to download `llama3.1:8b` (requires internet) or import an offline models folder.
 
 ### 2. Install Python dependencies
 
