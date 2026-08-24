@@ -17,6 +17,8 @@ _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 ASD_TEMPLATE_PATH = _TEMPLATE_DIR / "asd_school_age_boy_template.docx"
 CDBC_BOY_TEMPLATE_PATH = _TEMPLATE_DIR / "sunnyhill_cdbc_boy_template.docx"
 CDBC_GIRL_TEMPLATE_PATH = _TEMPLATE_DIR / "sunnyhill_cdbc_girl_template.docx"
+PSYCHED_BOY_TEMPLATE_PATH = _TEMPLATE_DIR / "psyched_boy_template.docx"
+PSYCHED_GIRL_TEMPLATE_PATH = _TEMPLATE_DIR / "psyched_girl_template.docx"
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -51,7 +53,9 @@ ASD_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
 FRONT_TABLE_LABELS: Mapping[str, Sequence[str]] = {
     "name": ("client full name", "preferred name", "name"),
     "date of birth": ("date of birth",),
-    "dates of evaluation": ("date(s) of evaluation", "dates of evaluation"),
+    "dates of evaluation": ("date(s) of evaluation", "dates of evaluation", "date(s) of assessment"),
+    "date of evaluation": ("date(s) of evaluation", "dates of evaluation", "date(s) of assessment"),
+    "date of assessment": ("date(s) of assessment", "dates of assessment", "date(s) of evaluation"),
     "date of report": ("date of report",),
     "chronological age": ("chronological age", "age at assessment"),
     "examiner": ("examiner", "assessing psychologist"),
@@ -82,6 +86,34 @@ CDBC_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
 )
 
 
+# The Psycho-Educational template has a table-based front page (same shape as
+# ASD) and mostly-exact heading matches; a few sections cover several
+# subsections in the Word doc (e.g. all the cognitive score tables between
+# "Test Results" and "Academic Abilities") — anchoring on the first heading in
+# that span means the generated content replaces the whole span, consistent
+# with how ASD/CDBC handle "Recommendations"-style catch-all sections.
+PSYCHED_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
+    ("reason for referral", ("Reason for Referral",)),
+    ("presenting concerns (as reported by parents)", ("Presenting Concerns as Reported by Parents",)),
+    ("teacher's perspective", ("Teacher's Perspective",)),
+    ("child's perspective", ("Joe's Perspective", "Jane's Perspective")),
+    ("areas of relative strength & interests", ("Areas of Relative Strength & Interests",)),
+    ("family history", ("Family History",)),
+    ("developmental & medical history", ("Developmental & Medical History",)),
+    ("educational history", ("Educational History",)),
+    ("previous assessments & interventions", ("Previous Assessments & Interventions",)),
+    ("tests administered", ("Tests Administered",)),
+    ("behavioural observations", ("Behavioural Observations",)),
+    ("cognitive & neuropsychological results", ("Test Results",)),
+    ("academic achievement", ("Academic Abilities",)),
+    ("adaptive, behavioural & social-emotional functioning", ("Adaptive Behaviour",)),
+    ("summary of assessment results", ("Summary of Assessment Results",)),
+    ("diagnoses (dsm-5-tr)", ("Descriptors/Diagnoses (DSM-5-TR)",)),
+    ("highlighted recommendations", ("Highlighted Recommendations",)),
+    ("recommendations", ("Recommendations",)),
+)
+
+
 # Front-page paragraphs like "DATE OF BIRTH:" get the metadata value appended.
 CDBC_FRONT_LABELS: Mapping[str, Sequence[str]] = {
     "chart number": ("chart number",),
@@ -103,15 +135,28 @@ def supports_cdbc_template(title: str) -> bool:
     return "cdbc" in normalized or "sunny hill" in normalized or "sunnyhill" in normalized
 
 
-def supports_export(title: str) -> bool:
-    return supports_asd_template(title) or supports_cdbc_template(title)
+def supports_psyched_template(title: str) -> bool:
+    normalized = _normalize(title)
+    return "psycho-educational" in normalized or "psychoeducational" in normalized or "psyched" in normalized
+
+
+def has_branded_template(title: str) -> bool:
+    """True if this title matches a real branded Word template (ASD/CDBC/PsychEd).
+    Every report is still exportable via the generic fallback below — this only
+    tells you whether the output matches a clinic's specific letterhead/layout."""
+    return supports_asd_template(title) or supports_cdbc_template(title) or supports_psyched_template(title)
 
 
 def _select_profile(title: str):
-    """Return (template_path, section_targets, front_page_filler) for the title."""
+    """Return (template_path, section_targets, front_page_filler) for the title,
+    or None if there's no branded template — the caller falls back to a plain,
+    generic export in that case."""
     if supports_cdbc_template(title):
         template = CDBC_GIRL_TEMPLATE_PATH if "girl" in _normalize(title) else CDBC_BOY_TEMPLATE_PATH
         return template, CDBC_SECTION_TARGETS, _fill_front_page_cdbc
+    if supports_psyched_template(title):
+        template = PSYCHED_GIRL_TEMPLATE_PATH if "girl" in _normalize(title) else PSYCHED_BOY_TEMPLATE_PATH
+        return template, PSYCHED_SECTION_TARGETS, _fill_front_page_psyched
     if supports_asd_template(title):
         return ASD_TEMPLATE_PATH, ASD_SECTION_TARGETS, _fill_front_page_asd
     return None
@@ -145,6 +190,29 @@ def parse_markdown_sections(content: str) -> Dict[str, str]:
     }
 
 
+def parse_markdown_sections_ordered(content: str) -> List[Tuple[str, str]]:
+    """Like parse_markdown_sections, but keeps the original heading text and
+    document order — used for the generic export, which renders real headings
+    rather than looking sections up by normalized key."""
+    sections: List[Tuple[str, List[str]]] = []
+    for raw_line in (content or "").replace("\r\n", "\n").split("\n"):
+        match = re.match(r"^\s*#{1,6}\s+(.+?)\s*$", raw_line)
+        if match:
+            sections.append((match.group(1).strip(), []))
+            continue
+        if sections:
+            sections[-1][1].append(raw_line)
+
+    if not sections and content.strip():
+        return [("Report", [content.strip()])]
+
+    return [
+        (heading, "\n".join(lines).strip())
+        for heading, lines in sections
+        if "\n".join(lines).strip()
+    ]
+
+
 def create_report_docx(
     *,
     title: str,
@@ -152,10 +220,11 @@ def create_report_docx(
     report_type: str,
     content: str,
 ) -> BytesIO:
-    del report_type  # The configured template controls the document type.
     profile = _select_profile(title)
     if profile is None:
-        raise DocxExportError("A Word template is not configured for this report type.")
+        return _create_generic_report_docx(
+            title=title, patient_name=patient_name, report_type=report_type, content=content
+        )
     template_path, section_targets, fill_front_page = profile
     if not template_path.is_file():
         raise DocxExportError("The Word template for this report type is missing from the application.")
@@ -185,6 +254,61 @@ def create_report_docx(
     return _write_patched_package(patched_xml, template_path)
 
 
+def _create_generic_report_docx(
+    *,
+    title: str,
+    patient_name: str,
+    report_type: str,
+    content: str,
+) -> BytesIO:
+    """Plain, cleanly-formatted export for report types with no branded Word
+    template (e.g. Standard Intake, Neuropsych) — a real heading per section
+    instead of the clinic's specific letterhead/layout. Every report type is
+    exportable this way; only some also get the branded version."""
+    from docx import Document as _Document  # local import: only needed here
+
+    document = _Document()
+    ordered_sections = parse_markdown_sections_ordered(content)
+
+    document.add_heading(title or "Psychological Report", level=0)
+
+    info = document.add_paragraph()
+    info.add_run(f"Patient: {patient_name or 'Unknown'}").bold = True
+    if report_type:
+        document.add_paragraph(f"Report type: {report_type.replace('_', ' ').title()}")
+
+    # The front-page metadata section is structured "Label: value" lines (the
+    # same convention the branded exporters read) — surface it as a compact
+    # field list rather than rendering it as a regular narrative section.
+    metadata_heading = next(
+        (h for h, _ in ordered_sections if _normalize(h) in {"report metadata (front page)", "front page"}),
+        None,
+    )
+    if metadata_heading:
+        metadata_content = next(c for h, c in ordered_sections if h == metadata_heading)
+        for label, value in _extract_labeled_values(metadata_content).items():
+            if label in {"report title", "confidentiality statement"}:
+                continue
+            document.add_paragraph(f"{label.title()}: {value}")
+
+    document.add_paragraph(
+        "This is a confidential report. AI-generated content is a draft and must be "
+        "reviewed by a licensed clinician before use."
+    )
+
+    for heading, section_content in ordered_sections:
+        if heading == metadata_heading:
+            continue
+        document.add_heading(heading, level=1)
+        for block in _content_blocks(section_content):
+            document.add_paragraph(block)
+
+    buffer = BytesIO()
+    document.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
 def _write_patched_package(document_xml: bytes, template_path: Path) -> BytesIO:
     output = BytesIO()
     with ZipFile(template_path, "r") as source, ZipFile(
@@ -197,16 +321,19 @@ def _write_patched_package(document_xml: bytes, template_path: Path) -> BytesIO:
     return output
 
 
-def _fill_front_page_asd(
+def _fill_front_page_table_based(
     root,
     *,
     title: str,
     patient_name: str,
     metadata: Mapping[str, str],
+    title_anchor: str,
 ) -> None:
+    """Shared front-page filler for templates with a title paragraph, a
+    confidentiality sentence, and a labelled front-page table (ASD, PsychEd)."""
     paragraphs = root.xpath("/w:document/w:body/w:p", namespaces=NS)
     report_title = metadata.get("report title") or title
-    title_paragraph = _find_paragraph(paragraphs, ("Clinical Diagnostic Assessment Report",))
+    title_paragraph = _find_paragraph(paragraphs, (title_anchor,))
     if title_paragraph is not None:
         _set_element_text(title_paragraph, report_title)
 
@@ -238,6 +365,38 @@ def _fill_front_page_asd(
             continue
         label_text = original.split(":", 1)[0].strip()
         _set_cell_text(cell, f"{label_text}: {value}")
+
+
+def _fill_front_page_asd(
+    root,
+    *,
+    title: str,
+    patient_name: str,
+    metadata: Mapping[str, str],
+) -> None:
+    _fill_front_page_table_based(
+        root,
+        title=title,
+        patient_name=patient_name,
+        metadata=metadata,
+        title_anchor="Clinical Diagnostic Assessment Report",
+    )
+
+
+def _fill_front_page_psyched(
+    root,
+    *,
+    title: str,
+    patient_name: str,
+    metadata: Mapping[str, str],
+) -> None:
+    _fill_front_page_table_based(
+        root,
+        title=title,
+        patient_name=patient_name,
+        metadata=metadata,
+        title_anchor="Psycho-Educational Assessment Report",
+    )
 
 
 def _fill_front_page_cdbc(
@@ -468,4 +627,5 @@ def _content_blocks(text: str) -> List[str]:
 
 
 def _normalize(value: str) -> str:
-    return re.sub(r"\s+", " ", (value or "").strip().casefold())
+    folded = (value or "").replace("’", "'").replace("‘", "'")
+    return re.sub(r"\s+", " ", folded.strip().casefold())

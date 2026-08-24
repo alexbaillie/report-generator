@@ -33,10 +33,14 @@ export default function ReportDetailPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Word templates are wired up for ASD/autism and Sunny Hill CDBC reports.
-  const canExport =
+  // Every report can export to Word now: ASD, Sunny Hill CDBC, and
+  // Psycho-Educational reports use their clinic's branded template; anything
+  // else falls back to a plain, cleanly-formatted export on the backend.
+  const hasBrandedTemplate =
     !!report &&
-    (/asd|autism|cdbc|sunny\s*hill/i.test(report.title) || report.report_type === 'cdbc');
+    (/asd|autism|cdbc|sunny\s*hill|psycho-?educational|psyched/i.test(report.title) ||
+      report.report_type === 'cdbc' ||
+      report.report_type === 'psychoeducational');
 
   const startEditing = () => {
     if (!report) return;
@@ -193,17 +197,15 @@ export default function ReportDetailPage() {
                   <Pencil size={18} />
                   Edit
                 </button>
-                {canExport && (
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="btn btn-primary flex items-center gap-2 disabled:opacity-60"
-                  >
-                    <Download size={18} />
-                    {exporting ? 'Exporting...' : 'Download Word'}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="btn btn-primary flex items-center gap-2 disabled:opacity-60"
+                >
+                  <Download size={18} />
+                  {exporting ? 'Exporting...' : 'Download Word'}
+                </button>
                 <Link to="/reports" className="text-blue-400 underline">Back to reports</Link>
               </>
             )}
@@ -227,9 +229,9 @@ export default function ReportDetailPage() {
           <div>Type: {report.report_type}</div>
           <div>Created: {new Date(report.created_at).toLocaleString()}</div>
           <div>Last edited: {new Date(report.updated_at).toLocaleString()}</div>
-          {!canExport && !editing && (
+          {!hasBrandedTemplate && !editing && (
             <div className="mt-1 text-gray-500">
-              Word export is available for ASD and Sunny Hill CDBC reports only.
+              This report type has no clinic letterhead configured, so Word export uses a plain format.
             </div>
           )}
         </div>
