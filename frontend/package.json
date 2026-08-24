@@ -46,6 +46,7 @@
   "build": {
     "appId": "com.psychreport.app",
     "productName": "PsychReportGen",
+    "afterPack": "afterPack.js",
     "files": [
       "dist/**/*",
       "electron/**/*"

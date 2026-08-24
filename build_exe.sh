@@ -25,26 +25,21 @@ EOF
 echo "Building executable with PyInstaller..."
 python3 -m PyInstaller --clean --noconfirm pyinstaller.spec
 
-# Set the distribution directory
+# PyInstaller (onefile mode, per pyinstaller.spec) emits a single file at
+# dist/report_generator_backend with no extension on macOS/Linux — the same
+# path electron-builder expects to find as a DIRECTORY. Move the file aside
+# before creating the directory; mkdir on a path that's already a file fails.
 dist_dir="dist/report_generator_backend"
-mkdir -p "$dist_dir"
-
-# Ensure the built backend executable is inside the distribution directory
-built_exe=""
-for candidate in "dist/report_generator_backend" "dist/report_generator_backend/report_generator_backend"; do
-    if [ -f "$candidate" ]; then
-        built_exe="$candidate"
-        break
-    fi
-done
-
-if [ -z "$built_exe" ]; then
+if [ -f "dist/report_generator_backend" ]; then
+    mv "dist/report_generator_backend" "dist/report_generator_backend.bin"
+    mkdir -p "$dist_dir"
+    mv "dist/report_generator_backend.bin" "$dist_dir/report_generator_backend"
+elif [ -f "$dist_dir/report_generator_backend" ]; then
+    : # already in the expected layout
+else
     echo "Backend executable not found after PyInstaller build." >&2
+    ls -la dist || true
     exit 1
-fi
-
-if [ "$built_exe" != "$dist_dir/report_generator_backend" ]; then
-    cp -f "$built_exe" "$dist_dir/report_generator_backend"
 fi
 chmod +x "$dist_dir/report_generator_backend"
 

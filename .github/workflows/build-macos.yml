@@ -63,10 +63,39 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # Fetches the official macOS Ollama runtime (CLI binary + its supporting
+      # .dylib libraries and Apple Silicon MLX acceleration bundles — these all
+      # have to stay together in one folder, ollama depends on them at runtime)
+      # so electron-builder's mac.extraResources can bundle it into the .app.
+      # Without this step the packaged app has no Ollama binary and silently
+      # never starts it (the original bug this whole workflow exists to fix).
+      - name: Download Ollama macOS runtime
+        run: |
+          set -euo pipefail
+          url=$(curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest \
+            | jq -r '.assets[] | select(.name == "ollama-darwin.tgz") | .browser_download_url')
+          if [ -z "$url" ] || [ "$url" = "null" ]; then
+            echo "Could not find ollama-darwin.tgz in the latest Ollama release" >&2
+            exit 1
+          fi
+          echo "Downloading Ollama macOS runtime from: $url"
+          mkdir -p ollama/mac
+          curl -fsSL "$url" -o /tmp/ollama-darwin.tgz
+          tar -xzf /tmp/ollama-darwin.tgz -C ollama/mac
+          chmod +x ollama/mac/ollama ollama/mac/llama-server ollama/mac/llama-quantize
+          ls -la ollama/mac
+
       # IMPORTANT: do NOT run `npm run electron:build` on macOS because it triggers
       # `preelectron:build` which is a PowerShell script.
       - name: Build Electron macOS artifact(s)
         working-directory: frontend
+        env:
+          # No Apple Developer certificate is configured yet (code signing/
+          # notarization is a deliberate follow-up, not done here) — this stops
+          # electron-builder from searching the CI runner's empty keychain for
+          # one. The app and its bundled binaries still get ad-hoc signed
+          # (required on Apple Silicon), just not with a real identity.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --mac
 
       - name: Upload artifacts
