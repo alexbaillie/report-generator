@@ -34,7 +34,7 @@ npm test -- -t "name"  # single test by name
 # from frontend/
 npm run electron:build   # tsc + vite build, then electron-builder → frontend/release/
 ```
-`preelectron:build` first runs `../build_exe.ps1` (PowerShell), which PyInstaller-bundles the backend into `dist/report_generator_backend/` per `pyinstaller.spec`. electron-builder then bundles that plus a Windows Ollama runtime (`ollama/win`) as `extraResources`. Windows-focused (NSIS + portable); mac/linux targets are configured but the Ollama bundle is win32-only.
+`preelectron:build` runs `../build_exe.js`, a small cross-platform dispatcher that calls `build_exe.ps1` on Windows or `build_exe.sh` on macOS/Linux (keep the two build scripts in sync) to PyInstaller-bundle the backend into `dist/report_generator_backend/` per `pyinstaller.spec`. electron-builder then bundles that plus a per-platform Ollama runtime as `extraResources` — `ollama/win`, `ollama/mac`, or `ollama/linux` depending on target (`electron/main.js`'s `getOllamaPlatformInfo()` resolves the same per-OS binary at runtime). Each of those `ollama/<platform>/` folders is a local, git-ignored drop location: download the matching Ollama release for that OS and place it there before building — nothing is bundled in the repo itself. Targets: Windows (NSIS + portable, tested), macOS (dmg) and Linux (AppImage) are wired up in code but **not yet build-tested on real hardware** — verify with `npx electron-builder --dir` on that OS before shipping. App icons (`assets/icon.ico/.icns/.png`) don't exist yet for any platform (cosmetic gap; electron-builder falls back to a default).
 
 ## Architecture
 

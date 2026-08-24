@@ -298,11 +298,28 @@ async function ensureOllamaModelStoreInstalled() {
   }
 }
 
+// Ollama is bundled per-platform under ollama/<subdir> (see the electron-builder
+// "extraResources" overrides in package.json). Each build only ever ships the
+// binary for its own OS, copied into a common "ollama" folder at packaging time.
+function getOllamaPlatformInfo() {
+  switch (process.platform) {
+    case 'win32':
+      return { subdir: 'win', exeName: 'ollama.exe' };
+    case 'darwin':
+      return { subdir: 'mac', exeName: 'ollama' };
+    case 'linux':
+      return { subdir: 'linux', exeName: 'ollama' };
+    default:
+      return null;
+  }
+}
+
 async function startOllama() {
   const ollamaTagsUrl = 'http://127.0.0.1:11434/api/tags';
 
-  if (process.platform !== 'win32') {
-    logToFile('Ollama bundling not configured for this platform; skipping Ollama startup.');
+  const platformInfo = getOllamaPlatformInfo();
+  if (!platformInfo) {
+    logToFile(`Ollama bundling not configured for platform "${process.platform}"; skipping Ollama startup.`);
     return;
   }
 
@@ -310,12 +327,20 @@ async function startOllama() {
 
   const ollamaDir = app.isPackaged
     ? path.join(process.resourcesPath, 'ollama')
-    : path.join(__dirname, '..', '..', '..', 'ollama', 'win');
-  const ollamaExePath = path.join(ollamaDir, 'ollama.exe');
+    : path.join(__dirname, '..', '..', '..', 'ollama', platformInfo.subdir);
+  const ollamaExePath = path.join(ollamaDir, platformInfo.exeName);
 
   if (!fs.existsSync(ollamaExePath)) {
     logToFile(`Bundled Ollama binary not found at: ${ollamaExePath}`);
     return;
+  }
+
+  if (process.platform !== 'win32') {
+    try {
+      fs.chmodSync(ollamaExePath, 0o755);
+    } catch (e) {
+      logToFile(`Failed to chmod Ollama binary (${ollamaExePath}): ${e && e.message ? e.message : String(e)}`);
+    }
   }
 
   const alreadyUp = await httpOk(ollamaTagsUrl, 1200);

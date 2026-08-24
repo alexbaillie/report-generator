@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"ping -n 6 127.0.0.1 >nul && cross-env NODE_ENV=development electron .\"",
-    "preelectron:build": "powershell -ExecutionPolicy Bypass -File ..\\build_exe.ps1",
+    "preelectron:build": "node ../build_exe.js",
     "electron:build": "npm run build && electron-builder",
     "test": "jest",
     "test:watch": "jest --watch"
@@ -54,14 +54,6 @@
       {
         "from": "../dist/report_generator_backend",
         "to": "report_generator_backend"
-      },
-      {
-        "from": "../ollama/win",
-        "to": "ollama",
-        "filter": [
-          "**/*",
-          "!lib/ollama/rocblas/**"
-        ]
       }
     ],
     "directories": {
@@ -81,7 +73,17 @@
       ],
       "icon": "assets/icon.ico",
       "artifactName": "PsychReportGen-${version}-Setup.${ext}",
-      "executableName": "PsychReportGen"
+      "executableName": "PsychReportGen",
+      "extraResources": [
+        {
+          "from": "../ollama/win",
+          "to": "ollama",
+          "filter": [
+            "**/*",
+            "!lib/ollama/rocblas/**"
+          ]
+        }
+      ]
     },
     "portable": {
       "artifactName": "PsychReportGen-${version}-Portable.${ext}"
@@ -95,11 +97,23 @@
     },
     "mac": {
       "target": ["dmg"],
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "extraResources": [
+        {
+          "from": "../ollama/mac",
+          "to": "ollama"
+        }
+      ]
     },
     "linux": {
       "target": ["AppImage"],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "../ollama/linux",
+          "to": "ollama"
+        }
+      ]
     }
   }
 }
