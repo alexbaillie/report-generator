@@ -13,7 +13,7 @@ interface Report {
   updated_at: string;
 }
 
-function filenameFromDisposition(disposition: string | undefined, fallback: string): string {
+export function filenameFromDisposition(disposition: string | undefined, fallback: string): string {
   if (!disposition) return fallback;
   const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
   return match ? decodeURIComponent(match[1]) : fallback;
