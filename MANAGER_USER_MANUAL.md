@@ -40,8 +40,8 @@ The template content is used for two things:
 
 Note:
 
-- The AI model (`tinyllama`) must be present on the computer for AI drafting to work.
-- If `tinyllama` is missing, the app will prompt you to either download it (requires internet) or import an offline models folder.
+- The AI model (`llama3.1:8b`) must be present on the computer for AI drafting to work.
+- If `llama3.1:8b` is missing, the app will prompt you to either download it (requires internet) or import an offline models folder.
 
 ### AI drafts are not final clinical output
 
@@ -61,7 +61,7 @@ AI output must be reviewed and edited by a licensed clinician. The goal is to sp
 
 If AI generation does not work during the test report run:
 
-- If you see a prompt about the required model `tinyllama`, follow the steps in “AI generation fails” under Troubleshooting.
+- If you see a prompt about the required model `llama3.1:8b`, follow the steps in “AI generation fails” under Troubleshooting.
 
 ## Managing templates
 
@@ -286,7 +286,7 @@ Possible causes:
 What to do:
 
 - Close the app and re-open.
-- If a prompt appears saying the model `tinyllama` is missing:
+- If a prompt appears saying the model `llama3.1:8b` is missing:
   - Select **Download model** to download it automatically.
     - This requires internet access for the computer (at least once).
   - If your clinic computers do not have internet access, select **Import models folder** and choose the offline model store folder provided by your support person.

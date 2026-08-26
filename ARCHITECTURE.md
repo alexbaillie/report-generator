@@ -46,7 +46,7 @@ The Psychological Report Generator is a local-first desktop application built wi
                                             ▼
                                     ┌───────────────┐
                                     │    Ollama     │
-                                    │  (TinyLLaMA)  │
+                                    │  (Llama 3.1)  │
                                     │  Local Model  │
                                     └───────────────┘
 ```
@@ -77,7 +77,7 @@ The Psychological Report Generator is a local-first desktop application built wi
 
 ### AI Layer
 - **Ollama**: Local LLM inference engine
-- **TinyLLaMA**: Small, efficient language model
+- **Llama 3.1 8B**: Local language model used for report generation
 
 ### Testing
 - **Jest**: JavaScript testing framework
@@ -151,7 +151,7 @@ psychological-report-generator/
 
 4. **AI Generation**
    - Sends prompt to Ollama via HTTP
-   - Ollama runs TinyLLaMA model locally
+   - Ollama runs the Llama 3.1 8B model locally
    - Returns generated report text
 
 5. **Storage**
@@ -192,7 +192,7 @@ psychological-report-generator/
 Note:
 
 - The app does not require internet for normal operation.
-- Internet is only used if a user explicitly chooses to download an AI model (for example, the `tinyllama` model via Ollama).
+- Internet is only used if a user explicitly chooses to download an AI model (for example, the `llama3.1:8b` model via Ollama).
 
 ## Performance Considerations
 
@@ -209,7 +209,7 @@ Note:
 - Streaming responses for large reports
 
 ### AI Inference
-- TinyLLaMA chosen for speed and size
+- Llama 3.1 8B chosen for output quality; runs locally with no network latency
 - Configurable token limits
 - Timeout handling for long generations
 - Local inference (no network latency)

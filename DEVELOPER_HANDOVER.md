@@ -43,7 +43,7 @@ Key files:
 Responsibilities of `frontend/electron/main.js`:
 
 - Register a custom `app://` protocol for loading the packaged React build.
-- Start bundled Ollama (if needed). If the required model (`tinyllama`) is missing, prompt the user to:
+- Start bundled Ollama (if needed). If the required model (`llama3.1:8b`) is missing, prompt the user to:
   - download it (requires internet), or
   - import an offline models folder, or
   - continue without AI.
@@ -73,7 +73,7 @@ Key files:
 ### AI
 
 - Ollama, accessed via HTTP at `OLLAMA_BASE_URL` (defaults to `http://127.0.0.1:11434`).
-- Current model used by the backend: `tinyllama`.
+- Current model used by the backend: `llama3.1:8b`.
 
 Key files:
 
@@ -107,8 +107,8 @@ Key files:
 2. Electron creates the BrowserWindow and shows a loading screen until backend is ready.
 3. Electron uses a per-user writable model directory: `app.getPath('userData')/ollama/models`.
 4. Electron starts Ollama (`ollama.exe serve`) unless an Ollama already exists on `127.0.0.1:11434`.
-   - If Ollama is up but `tinyllama` is missing, the user is prompted to download/import/skip.
-5. Electron starts the backend (`report_generator_backend.exe`) with `OLLAMA_BASE_URL` set.
+   - If Ollama is up but `llama3.1:8b` is missing, the user is prompted to download/import/skip.
+5. Electron starts the backend (`report_generator_backend.exe`) with `OLLAMA_BASE_URL` and `OLLAMA_MODEL` set (both derived from the same `REQUIRED_OLLAMA_MODEL` constant used to provision the model in step 4, so they can't drift apart).
 6. Electron polls `/health` and, once ready, loads the packaged React app.
 
 ## Development workflow
@@ -162,7 +162,7 @@ Optional (recommended for air-gapped clinics as a separate artifact, not bundled
 - `ollama/model-store/`
   - A copy of an Ollama model cache, typically copied from:
     - `C:\Users\<you>\.ollama\models\`
-  - Must include the `tinyllama` model under `manifests/` and the referenced blobs under `blobs/`.
+  - Must include the `llama3.1:8b` model under `manifests/` and the referenced blobs under `blobs/`.
   - This can be distributed as an offline “models pack” folder/zip and imported by the app on first run.
 
 These staging directories are ignored by git to avoid committing large binaries.
@@ -184,7 +184,7 @@ electron-builder bundles extra resources into the app:
 - `dist/report_generator_backend` -> `resources/report_generator_backend`
 - `ollama/win` -> `resources/ollama`
 
-By default, the model store is not bundled into the installer to avoid multi-GB NSIS payload/extraction failures. Instead, the app prompts the user to download `tinyllama` (internet) or import an offline models folder.
+By default, the model store is not bundled into the installer to avoid multi-GB NSIS payload/extraction failures. Instead, the app prompts the user to download `llama3.1:8b` (internet) or import an offline models folder.
 
 ## Logs and debugging
 
@@ -208,7 +208,7 @@ This includes:
 - Ollama bind error:
   - `listen tcp 127.0.0.1:11434: bind: Only one usage ...`
   - Means something is already using port 11434 (often an existing Ollama).
-  - The Electron main process tries to reuse the existing Ollama if it has `tinyllama`.
+  - The Electron main process tries to reuse the existing Ollama if it has `llama3.1:8b`.
 
 ### Useful local checks
 

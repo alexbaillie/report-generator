@@ -16,13 +16,13 @@ Before you begin, ensure you have the following installed:
 
 3. **Ollama**
    - Download from [ollama.ai](https://ollama.ai)
-   - Install the TinyLLaMA model: `ollama pull tinyllama`
+   - Install the model: `ollama pull llama3.1:8b`
    - Verify Ollama is running: `ollama list`
 
 Note:
 
-- For development, you should install Ollama and `tinyllama` locally.
-- For packaged desktop builds (Windows installer), the Ollama runtime is bundled with the app. If `tinyllama` is missing, the app will prompt the user to download it (requires internet) or import an offline models folder.
+- For development, you should install Ollama and `llama3.1:8b` locally.
+- For packaged desktop builds (Windows installer), the Ollama runtime is bundled with the app. If `llama3.1:8b` is missing, the app will prompt the user to download it (requires internet) or import an offline models folder.
 
 ## Step 1: Backend Setup
 
@@ -101,7 +101,7 @@ This will:
    ```bash
    ollama list
    ```
-   You should see `tinyllama` in the list.
+   You should see `llama3.1:8b` in the list.
 
 2. **Check Backend**: Visit `http://localhost:8000/health`
    - Should return: `{"status": "healthy"}`
