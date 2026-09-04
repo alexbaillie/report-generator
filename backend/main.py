@@ -8,13 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from api import reports, documents, templates, ai
 from database.db import init_db
 from database.backup import backup_database
+from seed_data import seed_templates
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Back up the existing database, then initialize it, on startup."""
+    """Back up the existing database, initialize it, and ensure default templates exist, on startup."""
     backup_database()
     init_db()
+    seed_templates()
     yield
 
 

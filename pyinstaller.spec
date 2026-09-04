@@ -49,9 +49,13 @@ def add_dir_if_exists(analysis, source, target):
         analysis.datas += Tree(source, prefix=target)
 
 # Add existing directories
-add_dir_if_exists(a, 'backend/data', 'data')
+# NOTE: backend/data is deliberately NOT bundled here — it holds the live
+# dev database (real report/patient rows, upload files, rotating backups).
+# Bundling it would ship that dev data inside every packaged install; the
+# app creates a fresh, empty data/ directory itself via init_db() at runtime.
 add_dir_if_exists(a, 'backend/ollama_models', 'ollama_models')
 add_dir_if_exists(a, 'backend/templates', 'templates')
+add_dir_if_exists(a, 'backend/seeds', 'seeds')
 
 # Add any additional files needed by your application
 # a.binaries += [('path/to/file', 'path/in/bundle', 'DATA')]
