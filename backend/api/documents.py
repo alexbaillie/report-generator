@@ -9,14 +9,14 @@ from pydantic import BaseModel
 from datetime import datetime
 from pathlib import Path
 import shutil
-from database.db import get_db
+from database.db import get_db, DATA_DIR
 from database.models import Document
 from services.document_processor import process_document
 
 router = APIRouter()
 
 # Create uploads directory
-UPLOAD_DIR = Path(__file__).parent.parent / "data" / "uploads"
+UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 class DocumentResponse(BaseModel):
