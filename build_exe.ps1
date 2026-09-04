@@ -83,7 +83,9 @@ function Copy-IfExists {
 }
 
 # Copy only the directories that exist
-Copy-IfExists -source "backend/data" -destination "$distDir/backend/data"
+# NOTE: backend/data (the live dev database, uploads, and rotating backups)
+# is deliberately NOT copied here — see pyinstaller.spec for why. The app
+# creates a fresh, empty data/ directory itself via init_db() at runtime.
 Copy-IfExists -source "backend/ollama_models" -destination "$distDir/backend/ollama_models"
 Copy-IfExists -source "backend/database" -destination "$distDir/backend/database"
 Copy-IfExists -source "backend/templates" -destination "$distDir/backend/templates"
