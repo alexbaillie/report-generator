@@ -9,11 +9,11 @@ It is written for the current architecture:
 
 ## Current state (baseline)
 
-- Model: `tinyllama` (hard-coded in `llm_service.py`)
+- Model: `llama3.1:8b` (configured centrally via `OLLAMA_MODEL` in `services/ollama_client.py`, overridable by env var; `llm_service.py` no longer hard-codes a model name)
 - Model distribution/runtime:
   - The Ollama runtime is bundled with the desktop app on Windows.
   - The installer does not bundle the Ollama model store by default.
-  - If the required model (`tinyllama`) is missing, the desktop app prompts the user to:
+  - If the required model (`llama3.1:8b`) is missing, the desktop app prompts the user to:
     - download it (requires internet), or
     - import an offline models folder, or
     - continue without AI.

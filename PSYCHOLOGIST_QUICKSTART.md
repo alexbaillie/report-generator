@@ -12,9 +12,9 @@ AI output is a draft. Always review and edit before finalizing.
 
 Note:
 
-- The AI model used by the app is `tinyllama`.
+- The AI model used by the app is `llama3.1:8b`.
 - The installer does not download/install AI models.
-- If `tinyllama` is not installed on your computer, the app will prompt you to download it (requires internet) or import an offline models folder.
+- If `llama3.1:8b` is not installed on your computer, the app will prompt you to download it (requires internet) or import an offline models folder.
   - To download in the app: select **Download model** when prompted.
 
 ## App tabs (what each one is for)
@@ -112,7 +112,7 @@ Tip: After exporting, you can paste the text into Word/Google Docs for formattin
   - Close and re-open the app.
   - Let your clinic support person know what you were trying to generate.
 
-If you see a prompt that the model `tinyllama` is missing:
+If you see a prompt that the model `llama3.1:8b` is missing:
 
 - Select **Download model** to download it automatically.
   - This requires internet access for the computer (at least once).

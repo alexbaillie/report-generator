@@ -6,7 +6,11 @@ const fs = require('fs');
 const os = require('os');
 
 const RENDERER_PROTOCOL = 'app';
-const REQUIRED_OLLAMA_MODEL = 'tinyllama';
+// Single source of truth for the model: used both to provision it (download/
+// import prompt) and to tell the backend which model to call, so the two can
+// never drift apart the way tinyllama (provisioned) vs. llama3.1:8b (the
+// backend's own default) previously did.
+const REQUIRED_OLLAMA_MODEL = 'llama3.1:8b';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -1051,13 +1055,20 @@ app.whenReady().then(() => {
   
   // Start Ollama + backend when in production
   if (process.env.NODE_ENV !== 'development') {
+    // Tell the backend which model to call — must match REQUIRED_OLLAMA_MODEL,
+    // the model startOllama() actually provisions, or generation requests will
+    // fail against a model that was never downloaded.
+    const backendEnv = {
+      OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
+      OLLAMA_MODEL: REQUIRED_OLLAMA_MODEL,
+    };
     (async () => {
       logToFile('Starting Ollama + backend processes...');
       await startOllama();
-      startBackend({ OLLAMA_BASE_URL: 'http://127.0.0.1:11434' });
+      startBackend(backendEnv);
     })().catch((e) => {
       logToFile(`Failed to start Ollama/backend: ${e && e.message ? e.message : String(e)}`);
-      startBackend({ OLLAMA_BASE_URL: 'http://127.0.0.1:11434' });
+      startBackend(backendEnv);
     });
   }
 
