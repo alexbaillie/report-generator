@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Upload, Plus } from 'lucide-react';
 import { api } from '../services/api';
 
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -23,12 +23,12 @@ th,td{border:1px solid #9ca3af;padding:4px;vertical-align:top;}
   return `${style}${trimmed}`;
 }
 
-function extractFirstTableFromHtml(html: string) {
+export function extractFirstTableFromHtml(html: string) {
   const match = html.match(/<table[\s\S]*?<\/table>/i);
   return match ? match[0] : '';
 }
 
-function parseDelimitedTextToHtmlTable(text: string) {
+export function parseDelimitedTextToHtmlTable(text: string) {
   const raw = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   if (!raw) return '';
 
@@ -77,12 +77,12 @@ async function parseTableFileToHtml(file: File): Promise<string> {
 // can parse "Label: value" lines to fill the front-page table, title, and
 // confidentiality statement. Sending it through the LLM turns it into prose and
 // leaves those fields blank.
-function isFrontPageMetadataSection(title: string) {
+export function isFrontPageMetadataSection(title: string) {
   const normalized = title.trim().toLowerCase();
   return normalized.includes('report metadata') || normalized.includes('front page');
 }
 
-function metadataLinesFromInputs(inputs: Record<string, any>): string {
+export function metadataLinesFromInputs(inputs: Record<string, any>): string {
   return Object.entries(inputs)
     .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
     .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
