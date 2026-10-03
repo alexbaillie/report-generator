@@ -64,7 +64,11 @@ if (-not $builtExe) {
     throw "Backend executable not found after PyInstaller build. Expected one of: $($builtExeCandidates -join ', ')"
 }
 
-Copy-Item -Path $builtExe -Destination "$distDir/report_generator_backend.exe" -Force
+# A one-folder build already produces the exe inside $distDir; only a legacy
+# one-file build needs it copied in (and copying a file onto itself throws).
+if ((Resolve-Path $builtExe).Path -ne (Join-Path (Resolve-Path $distDir).Path "report_generator_backend.exe")) {
+    Copy-Item -Path $builtExe -Destination "$distDir/report_generator_backend.exe" -Force
+}
 
 # Function to safely copy directory if it exists
 function Copy-IfExists {
