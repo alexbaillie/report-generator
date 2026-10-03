@@ -99,20 +99,20 @@ a.hiddenimports.extend([
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+# One-folder build (exclude_binaries + COLLECT) rather than one-file: a one-file
+# exe re-extracts ~100MB into %TEMP%\_MEIxxxxxx on every launch and leaves it
+# behind when Electron force-kills the backend on exit, and self-extracting
+# exes are far more likely to be flagged by antivirus.
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='report_generator_backend',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -120,4 +120,15 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='report_generator_backend',
 )
