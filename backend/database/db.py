@@ -45,7 +45,7 @@ Base = declarative_base()
 
 def init_db():
     """Initialize database tables"""
-    from database.models import Report, Document, Template
+    from database.models import Report, Document, Template, ReportTestResult
     Base.metadata.create_all(bind=engine)
 
 def get_db():

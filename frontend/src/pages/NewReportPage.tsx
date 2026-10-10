@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, Plus } from 'lucide-react';
 import { api } from '../services/api';
+import ScoreItemsPreview from '../components/ScoreItemsPreview';
+import {
+  ScoreItem,
+  buildTestResults,
+  countItems,
+  describeCounts,
+  entriesMissingATest,
+  isScoreReportFile,
+  resolveTestName,
+  selectedItems,
+} from '../utils/testResults';
 
 export function escapeHtml(value: string) {
   return value
@@ -23,9 +34,10 @@ th,td{border:1px solid #9ca3af;padding:4px;vertical-align:top;}
   return `${style}${trimmed}`;
 }
 
-export function extractFirstTableFromHtml(html: string) {
-  const match = html.match(/<table[\s\S]*?<\/table>/i);
-  return match ? match[0] : '';
+// Every table in the HTML, not just the first: a test like the WISC-V comes with several.
+export function extractTablesFromHtml(html: string) {
+  const matches = (html || '').match(/<table[\s\S]*?<\/table>/gi);
+  return matches ? matches.join('<br>') : '';
 }
 
 export function parseDelimitedTextToHtmlTable(text: string) {
@@ -53,8 +65,7 @@ async function parseTableFileToHtml(file: File): Promise<string> {
   const text = await file.text();
 
   if (type.includes('html') || name.endsWith('.html') || name.endsWith('.htm')) {
-    const table = extractFirstTableFromHtml(text);
-    return table || '';
+    return extractTablesFromHtml(text);
   }
 
   if (name.endsWith('.tsv')) {
@@ -107,6 +118,25 @@ interface TestTableEntry {
   tableHtml: string;
   description: string;
   files: File[];
+  // Tables/graphs pulled out of an uploaded Word/PDF score report
+  items: ScoreItem[];
+  extracting: boolean;
+  extractNotes: string[];
+  extractError: string;
+}
+
+function newTestEntry(): TestTableEntry {
+  return {
+    type: '',
+    customName: '',
+    tableHtml: '',
+    description: '',
+    files: [],
+    items: [],
+    extracting: false,
+    extractNotes: [],
+    extractError: '',
+  };
 }
 
 interface Template {
@@ -173,7 +203,7 @@ export default function NewReportPage() {
     title: '',
     patient_name: '',
     template: '',
-    testTableEntries: [{ type: '', customName: '', tableHtml: '', description: '', files: [] }],
+    testTableEntries: [newTestEntry()],
     templateData: {},
     report_type: 'evaluation',
     template_id: '1',
@@ -369,35 +399,71 @@ export default function NewReportPage() {
     }
   };
 
+  const updateTestEntry = (index: number, update: (entry: TestTableEntry) => Partial<TestTableEntry>) =>
+    setFormData(prev => ({
+      ...prev,
+      testTableEntries: prev.testTableEntries.map((entry, i) =>
+        i === index ? { ...entry, ...update(entry) } : entry
+      )
+    }));
+
+  const toggleScoreItem = (index: number, id: string) =>
+    updateTestEntry(index, (entry) => ({
+      items: entry.items.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item))
+    }));
+
+  const setAllScoreItems = (index: number, selected: boolean) =>
+    updateTestEntry(index, (entry) => ({ items: entry.items.map((item) => ({ ...item, selected })) }));
+
+  const readError = (error: any) =>
+    error?.response?.data?.detail || error?.message || 'That file could not be read.';
+
   const handleFileUpload = (index: number) => async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newFiles = Array.from(files);
+    const input = e.target;
+    const newFiles = Array.from(input.files || []);
+    input.value = ''; // so the same file can be chosen again
+    if (newFiles.length === 0) return;
+
+    updateTestEntry(index, (entry) => ({ files: [...entry.files, ...newFiles] }));
+
+    // Word/PDF score reports: pull out every table and graph for the user to choose from.
+    for (const file of newFiles.filter(isScoreReportFile)) {
+      updateTestEntry(index, () => ({ extracting: true, extractError: '' }));
+      try {
+        const result = await api.extractScoreReport(file);
+        updateTestEntry(index, (entry) => ({
+          items: [
+            ...entry.items,
+            ...result.items.map((item) => ({ ...item, id: `${file.name}:${item.id}`, selected: true })),
+          ],
+          extractNotes: [...entry.extractNotes, ...result.warnings.map((w) => `${file.name}: ${w}`)],
+        }));
+      } catch (error) {
+        updateTestEntry(index, () => ({ extractError: `${file.name}: ${readError(error)}` }));
+      } finally {
+        updateTestEntry(index, () => ({ extracting: false }));
+      }
+    }
+
+    // Anything else (HTML/CSV/TSV/TXT) is a single table file, as before.
+    const tableFiles = newFiles.filter((file) => !isScoreReportFile(file));
+    if (tableFiles.length > 0) {
       let parsedHtml = '';
       try {
-        parsedHtml = await parseTableFileToHtml(newFiles[newFiles.length - 1]);
+        parsedHtml = await parseTableFileToHtml(tableFiles[tableFiles.length - 1]);
       } catch {
         parsedHtml = '';
       }
-      setFormData(prev => ({
-        ...prev,
-        testTableEntries: prev.testTableEntries.map((entry, i) =>
-          i === index
-            ? {
-              ...entry,
-              files: [...entry.files, ...newFiles],
-              tableHtml: parsedHtml ? ensureTableStyling(parsedHtml) : entry.tableHtml
-            }
-            : entry
-        )
-      }));
+      if (parsedHtml) {
+        updateTestEntry(index, () => ({ tableHtml: ensureTableStyling(parsedHtml) }));
+      }
     }
   };
 
   const addTestTable = () => {
     setFormData(prev => ({
       ...prev,
-      testTableEntries: [...prev.testTableEntries, { type: '', customName: '', tableHtml: '', description: '', files: [] }]
+      testTableEntries: [...prev.testTableEntries, newTestEntry()]
     }));
   };
 
@@ -421,6 +487,11 @@ export default function NewReportPage() {
       return;
     }
 
+    if (entriesMissingATest(formData.testTableEntries) > 0) {
+      alert('Please choose which test each uploaded score report or pasted table belongs to.');
+      return;
+    }
+
     setLoading(true);
     try {
       const selectedTemplate = templates.find(t => t.id.toString() === formData.template_id);
@@ -430,16 +501,19 @@ export default function NewReportPage() {
 
       // First, handle test tables
       for (const entry of formData.testTableEntries) {
-        if (entry.files.length > 0 || entry.description || entry.tableHtml) {
+        const picked = selectedItems(entry);
+        if (entry.files.length > 0 || entry.description || entry.tableHtml || picked.length > 0) {
           // Generate description for test table
           // For now, just use the description
-          const resolvedTestName = entry.type === 'Other'
-            ? (entry.customName || 'Other')
-            : entry.type;
+          const resolvedTestName = resolveTestName(entry);
           const uploaded = entry.files.length > 0
             ? `Uploaded files: ${entry.files.map(f => f.name).join(', ')}`
             : '';
-          const combined = [entry.tableHtml, entry.description, uploaded].filter(Boolean).join('\n\n');
+          const counts = countItems(picked);
+          const attached = picked.length > 0
+            ? `${describeCounts(counts.tables, counts.images)} from the score report will be placed under ${resolvedTestName} in the Word export.`
+            : '';
+          const combined = [entry.tableHtml, entry.description, uploaded, attached].filter(Boolean).join('\n\n');
           generatedSections[`Test Table: ${resolvedTestName}`] = combined;
         }
       }
@@ -480,7 +554,9 @@ export default function NewReportPage() {
         report_type: formData.report_type || selectedTemplate?.template_type || 'report',
         template_id: parseInt(formData.template_id),
         document_ids: formData.document_ids,
-        additional_inputs: generatedSections
+        additional_inputs: generatedSections,
+        // Score tables/graphs (uploaded or pasted) the Word export places under each test
+        test_results: buildTestResults(formData.testTableEntries)
       };
 
       const savedReport = await api.generateReport(reportData);
@@ -709,15 +785,18 @@ export default function NewReportPage() {
                           </select>
                           <button
                             type="button"
-                            className="bg-dark-700 p-2 rounded hover:bg-dark-600 transition-colors"
+                            className="bg-dark-700 px-3 py-2 rounded hover:bg-dark-600 transition-colors flex items-center gap-2"
+                            title="Upload a score report (Word or PDF) to pull out its tables and graphs"
                             onClick={() => document.getElementById(`test-upload-${index}`)?.click()}
                           >
-                            <Upload size={24} className="text-gray-300" />
+                            <Upload size={20} className="text-gray-300" />
+                            <span className="text-sm text-gray-200">Upload score report (Word or PDF)</span>
                           </button>
                           <input
                             id={`test-upload-${index}`}
                             type="file"
                             className="hidden"
+                            accept=".docx,.pdf,.html,.htm,.csv,.tsv,.txt"
                             onChange={handleFileUpload(index)}
                             multiple
                           />
@@ -741,7 +820,7 @@ export default function NewReportPage() {
                         ) : null}
 
                         <div className="mb-3">
-                          <label className="text-white text-sm mb-2 block">Paste Table</label>
+                          <label className="text-white text-sm mb-2 block">Or paste tables</label>
                           <div
                             className="w-full min-h-[120px] rounded border border-dark-600 bg-dark-800 p-2 text-gray-100 overflow-auto"
                             contentEditable
@@ -751,7 +830,7 @@ export default function NewReportPage() {
                               if (!clipboard) return;
                               const html = clipboard.getData('text/html');
                               const text = clipboard.getData('text/plain');
-                              const tableFromHtml = html ? extractFirstTableFromHtml(html) : '';
+                              const tableFromHtml = html ? extractTablesFromHtml(html) : '';
                               const tableFromText = !tableFromHtml && text ? parseDelimitedTextToHtmlTable(text) : '';
                               const next = tableFromHtml || tableFromText;
                               if (next) {
@@ -776,7 +855,7 @@ export default function NewReportPage() {
                             }}
                             dangerouslySetInnerHTML={{ __html: entry.tableHtml || '' }}
                           ></div>
-                          <div className="text-xs text-gray-400 mt-1">Paste from Excel/Sheets or a table from another document.</div>
+                          <div className="text-xs text-gray-400 mt-1">Paste one or more tables from Excel, Word or a score report. Tables are added to the Word report under this test.</div>
                         </div>
 
                         {entry.files.length > 0 ? (
@@ -786,6 +865,19 @@ export default function NewReportPage() {
                             ))}
                           </div>
                         ) : null}
+
+                        {entry.extracting ? (
+                          <div className="mb-3 text-sm text-gray-300">Reading score report…</div>
+                        ) : null}
+                        {entry.extractError ? (
+                          <div className="mb-3 text-sm text-red-400">{entry.extractError}</div>
+                        ) : null}
+                        <ScoreItemsPreview
+                          items={entry.items}
+                          notes={entry.extractNotes}
+                          onToggle={(id) => toggleScoreItem(index, id)}
+                          onSetAll={(selected) => setAllScoreItems(index, selected)}
+                        />
 
                         {entry.tableHtml ? <PreviewTable html={entry.tableHtml} /> : null}
                         <div className="mt-3">

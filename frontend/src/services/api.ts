@@ -47,6 +47,37 @@ export const api = {
     });
   },
 
+  async getReportTestResults(id: number) {
+    const response = await apiClient.get(`/reports/${id}/test-results`);
+    return response.data as Array<{ test_name: string; tables: number; images: number }>;
+  },
+
+  // Score reports (Word/PDF) -> tables and graphs to place under a test
+  async extractScoreReport(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post('/score-reports/extract', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data as {
+      filename: string;
+      items: Array<{
+        id: string;
+        kind: 'table' | 'image';
+        caption: string;
+        rows?: string[][];
+        content_type?: string;
+        data_b64?: string;
+        width?: number;
+        height?: number;
+      }>;
+      warnings: string[];
+    };
+  },
+
   // Documents
   async uploadDocument(file: File) {
     const formData = new FormData();

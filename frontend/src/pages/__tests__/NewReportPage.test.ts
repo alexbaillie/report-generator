@@ -1,6 +1,6 @@
 import {
   escapeHtml,
-  extractFirstTableFromHtml,
+  extractTablesFromHtml,
   parseDelimitedTextToHtmlTable,
   isFrontPageMetadataSection,
   metadataLinesFromInputs,
@@ -18,14 +18,22 @@ describe('escapeHtml', () => {
   });
 });
 
-describe('extractFirstTableFromHtml', () => {
+describe('extractTablesFromHtml', () => {
   it('extracts a table embedded in other markup', () => {
     const html = '<div>before</div><table><tr><td>1</td></tr></table><p>after</p>';
-    expect(extractFirstTableFromHtml(html)).toBe('<table><tr><td>1</td></tr></table>');
+    expect(extractTablesFromHtml(html)).toBe('<table><tr><td>1</td></tr></table>');
+  });
+
+  it('keeps every table, not just the first (a test like the WISC-V has several)', () => {
+    const html = '<table><tr><td>1</td></tr></table><p>between</p><TABLE><tr><td>2</td></tr></TABLE>';
+    expect(extractTablesFromHtml(html)).toBe(
+      '<table><tr><td>1</td></tr></table><br><TABLE><tr><td>2</td></tr></TABLE>'
+    );
   });
 
   it('returns an empty string when there is no table', () => {
-    expect(extractFirstTableFromHtml('<div>no table here</div>')).toBe('');
+    expect(extractTablesFromHtml('<div>no table here</div>')).toBe('');
+    expect(extractTablesFromHtml('')).toBe('');
   });
 });
 
