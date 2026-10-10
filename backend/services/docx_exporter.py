@@ -257,7 +257,9 @@ def create_report_docx(
         xml_declaration=True,
         standalone=True,
     )
-    patched = _write_patched_package(patched_xml, template_path)
+    patched = _write_patched_package(
+        patched_xml, template_path, _patched_header_footer_parts(template_path, clean_name)
+    )
     return apply_test_results(patched, test_results, section_targets)
 
 
@@ -316,16 +318,41 @@ def _create_generic_report_docx(
     return buffer
 
 
-def _write_patched_package(document_xml: bytes, template_path: Path) -> BytesIO:
+def _write_patched_package(
+    document_xml: bytes, template_path: Path, replacements: Optional[Mapping[str, bytes]] = None
+) -> BytesIO:
+    replacements = replacements or {}
     output = BytesIO()
     with ZipFile(template_path, "r") as source, ZipFile(
         output, "w", compression=ZIP_DEFLATED
     ) as destination:
         for info in source.infolist():
-            payload = document_xml if info.filename == "word/document.xml" else source.read(info.filename)
+            if info.filename == "word/document.xml":
+                payload = document_xml
+            elif info.filename in replacements:
+                payload = replacements[info.filename]
+            else:
+                payload = source.read(info.filename)
             destination.writestr(info, payload)
     output.seek(0)
     return output
+
+
+def _patched_header_footer_parts(template_path: Path, full_name: str) -> Dict[str, bytes]:
+    """The running header ("... Report for JOE LASTNAME") lives in its own part,
+    not document.xml, so it needs the same placeholder-name swap as the body."""
+    if not full_name:
+        return {}
+    parts: Dict[str, bytes] = {}
+    with ZipFile(template_path, "r") as source:
+        for name in source.namelist():
+            if re.fullmatch(r"word/(header|footer)\d*\.xml", name):
+                part_root = etree.fromstring(source.read(name))
+                _replace_placeholder_names(part_root, full_name)
+                parts[name] = etree.tostring(
+                    part_root, encoding="UTF-8", xml_declaration=True, standalone=True
+                )
+    return parts
 
 
 def _fill_front_page_table_based(
