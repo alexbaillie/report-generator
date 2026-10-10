@@ -12,6 +12,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from lxml import etree
 
+from services.docx_test_results import apply_test_results
+
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 ASD_TEMPLATE_PATH = _TEMPLATE_DIR / "asd_school_age_boy_template.docx"
@@ -219,12 +221,16 @@ def create_report_docx(
     patient_name: str,
     report_type: str,
     content: str,
+    test_results: Optional[Sequence[Mapping]] = None,
 ) -> BytesIO:
+    """``test_results``: uploaded/pasted score tables and graphs per test, placed
+    under that test's section by ``apply_test_results``."""
     profile = _select_profile(title)
     if profile is None:
-        return _create_generic_report_docx(
+        generic = _create_generic_report_docx(
             title=title, patient_name=patient_name, report_type=report_type, content=content
         )
+        return apply_test_results(generic, test_results, ())
     template_path, section_targets, fill_front_page = profile
     if not template_path.is_file():
         raise DocxExportError("The Word template for this report type is missing from the application.")
@@ -251,7 +257,8 @@ def create_report_docx(
         xml_declaration=True,
         standalone=True,
     )
-    return _write_patched_package(patched_xml, template_path)
+    patched = _write_patched_package(patched_xml, template_path)
+    return apply_test_results(patched, test_results, section_targets)
 
 
 def _create_generic_report_docx(

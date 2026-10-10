@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
-from typing import List, Dict, Optional
+import json
+from typing import List, Dict, Literal, Optional
 from pydantic import BaseModel
 from datetime import datetime
 from database.db import get_db
-from database.models import Report
+from database.models import Report, ReportTestResult
 from services.report_generator import generate_report, generate_report_section
+from services.score_report_extractor import html_to_tables
 from services.docx_exporter import (
     DocxExportError,
     create_report_docx,
@@ -39,6 +41,27 @@ class ReportResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class TestResultItem(BaseModel):
+    """One score table or graph picked from an uploaded score report."""
+    kind: Literal["table", "image"]
+    caption: str = ""
+    rows: Optional[List[List[str]]] = None
+    content_type: Optional[str] = None
+    data_b64: Optional[str] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+
+class TestResultGroup(BaseModel):
+    """Everything attached for one test (e.g. WISC-V): chosen items plus any pasted HTML tables."""
+    test_name: str
+    pasted_html: str = ""
+    items: List[TestResultItem] = []
+
+class TestResultSummary(BaseModel):
+    test_name: str
+    tables: int
+    images: int
+
 class GenerateReportRequest(BaseModel):
     title: str
     patient_name: str
@@ -46,6 +69,7 @@ class GenerateReportRequest(BaseModel):
     template_id: int
     document_ids: List[int] = []
     additional_inputs: Dict = {}
+    test_results: List[TestResultGroup] = []
 
 class UpdateReportRequest(BaseModel):
     title: Optional[str] = None
@@ -69,6 +93,22 @@ async def generate_section(request: SectionGenerationRequest, db: Session = Depe
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def _save_test_results(db: Session, report_id: int, groups: List[TestResultGroup]) -> None:
+    for position, group in enumerate(groups):
+        name = group.test_name.strip()
+        items = [item.model_dump(exclude_none=True) for item in group.items]
+        items += html_to_tables(group.pasted_html)  # every pasted table, not just the first
+        if name and items:
+            db.add(
+                ReportTestResult(
+                    report_id=report_id,
+                    test_name=name,
+                    position=position,
+                    payload=json.dumps({"items": items}),
+                )
+            )
+
+
 @router.post("/generate", response_model=ReportResponse)
 async def generate_report_endpoint(request: GenerateReportRequest, db: Session = Depends(get_db)):
     """Generate a full report by combining section outputs and save it"""
@@ -89,11 +129,14 @@ async def generate_report_endpoint(request: GenerateReportRequest, db: Session =
             content=content,
         )
         db.add(report)
+        db.flush()  # need the id for the attached test results; commit once below
+        _save_test_results(db, report.id, request.test_results)
         db.commit()
         db.refresh(report)
 
         return report
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/", response_model=List[ReportResponse])
@@ -131,6 +174,25 @@ async def update_report(report_id: int, request: UpdateReportRequest, db: Sessio
     db.refresh(report)
     return report
 
+@router.get("/{report_id}/test-results", response_model=List[TestResultSummary])
+async def list_test_results(report_id: int, db: Session = Depends(get_db)):
+    """What score tables/graphs are attached to a report (counts only, no payload)."""
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    summaries = []
+    for result in report.test_results:
+        items = json.loads(result.payload).get("items", [])
+        summaries.append(
+            TestResultSummary(
+                test_name=result.test_name,
+                tables=sum(1 for i in items if i.get("kind") == "table"),
+                images=sum(1 for i in items if i.get("kind") == "image"),
+            )
+        )
+    return summaries
+
+
 @router.get("/{report_id}/export-docx")
 async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
     """Export a saved report into its configured Word template."""
@@ -145,6 +207,10 @@ async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
             patient_name=report.patient_name,
             report_type=report.report_type,
             content=report.content,
+            test_results=[
+                {"test_name": r.test_name, "items": json.loads(r.payload).get("items", [])}
+                for r in report.test_results
+            ],
         )
     except DocxExportError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

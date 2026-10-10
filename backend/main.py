@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import reports, documents, templates, ai
+from api import reports, documents, templates, ai, score_reports
 from database.db import init_db
 from database.backup import backup_database
 from seed_data import seed_templates
@@ -44,6 +44,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(templates.router, prefix="/api/templates", tags=["templates"])
 app.include_router(ai.router, prefix="/api/ai", tags=["ai"])
+app.include_router(score_reports.router, prefix="/api/score-reports", tags=["score-reports"])
 
 @app.get("/")
 async def root():

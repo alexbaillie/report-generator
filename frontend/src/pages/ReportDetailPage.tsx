@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Pencil, Save, X } from 'lucide-react';
 import { api } from '../services/api';
+import { describeCounts } from '../utils/testResults';
 
 interface Report {
   id: number;
@@ -32,6 +33,7 @@ export default function ReportDetailPage() {
   const [draftContent, setDraftContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Array<{ test_name: string; tables: number; images: number }>>([]);
 
   // Every report can export to Word now: ASD, Sunny Hill CDBC, and
   // Psycho-Educational reports use their clinic's branded template; anything
@@ -121,6 +123,8 @@ export default function ReportDetailPage() {
         if (!id) return;
         const data = await api.getReport(Number(id));
         setReport(data);
+        // Attached score tables/graphs are informational: never block the report on them.
+        api.getReportTestResults(Number(id)).then(setTestResults).catch(() => setTestResults([]));
       } catch (e: any) {
         setError(e?.message || 'Failed to load report');
       } finally {
@@ -229,6 +233,18 @@ export default function ReportDetailPage() {
           <div>Type: {report.report_type}</div>
           <div>Created: {new Date(report.created_at).toLocaleString()}</div>
           <div>Last edited: {new Date(report.updated_at).toLocaleString()}</div>
+          {testResults.length > 0 && (
+            <div className="mt-2 text-gray-300" data-testid="attached-test-results">
+              <div>Score tables and graphs included in the Word download:</div>
+              <ul className="list-disc ml-5 text-gray-400">
+                {testResults.map((result) => (
+                  <li key={result.test_name}>
+                    {result.test_name}: {describeCounts(result.tables, result.images)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {!hasBrandedTemplate && !editing && (
             <div className="mt-1 text-gray-500">
               This report type has no clinic letterhead configured, so Word export uses a plain format.
