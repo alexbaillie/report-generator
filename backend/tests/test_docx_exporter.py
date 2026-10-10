@@ -206,3 +206,49 @@ def test_generic_export_skips_empty_sections_and_opens_as_valid_docx():
 
     output = Document(exported)
     assert any(p.text == "Reason for Referral" for p in output.paragraphs)
+
+
+def _header_text(stream) -> str:
+    import re
+    from zipfile import ZipFile
+
+    with ZipFile(stream) as archive:
+        xml = " ".join(
+            archive.read(name).decode("utf8")
+            for name in archive.namelist()
+            if re.fullmatch(r"word/header\d*\.xml", name)
+        )
+    return re.sub(r"<[^>]+>", " ", xml)
+
+
+def test_running_header_shows_the_clients_name_not_the_template_placeholder():
+    for title in (
+        "Psycho-Educational Assessment - Boy",
+        "Psycho-Educational Assessment - Girl",
+        "SunnyHill CDBC Psychology Assessment - Boy",
+        "SunnyHill CDBC Psychology Assessment - Girl",
+        "ASD Clinical Diagnostic Assessment Report",
+    ):
+        stream = create_report_docx(
+            title=title,
+            patient_name="Alex Test",
+            report_type="x",
+            content="# Report Metadata (Front Page)\nClient Full Name: Alex Test\n",
+        )
+
+        header = _header_text(stream).lower()
+
+        assert "lastname" not in header, title
+        assert "joe" not in header and "jane" not in header, title
+        assert "alex" in header and "test" in header, title
+
+
+def test_header_keeps_the_placeholder_when_no_real_name_is_known():
+    stream = create_report_docx(
+        title="Psycho-Educational Assessment - Boy",
+        patient_name="Patient Name",
+        report_type="x",
+        content="",
+    )
+
+    assert "lastname" in _header_text(stream).lower()
