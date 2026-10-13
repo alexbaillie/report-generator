@@ -56,5 +56,9 @@ outputs/
 
 ollama/win/*
 !ollama/win/.gitkeep
+ollama/mac/*
+!ollama/mac/.gitkeep
+ollama/linux/*
+!ollama/linux/.gitkeep
 ollama/model-store/*
 !ollama/model-store/.gitkeep
