@@ -101,6 +101,7 @@
     "mac": {
       "target": ["dmg"],
       "icon": "assets/icon.icns",
+      "artifactName": "PsychReportGen-${version}-mac-${arch}.${ext}",
       "extraResources": [
         {
           "from": "../ollama/mac",

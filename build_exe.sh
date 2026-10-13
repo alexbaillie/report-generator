@@ -25,25 +25,21 @@ EOF
 echo "Building executable with PyInstaller..."
 python3 -m PyInstaller --clean --noconfirm pyinstaller.spec
 
-# PyInstaller (onefile mode, per pyinstaller.spec) emits a single file at
-# dist/report_generator_backend with no extension on macOS/Linux — the same
-# path electron-builder expects to find as a DIRECTORY. Move the file aside
-# before creating the directory; mkdir on a path that's already a file fails.
+# pyinstaller.spec builds a one-folder app: dist/report_generator_backend/ holds
+# the executable (no extension on macOS/Linux) next to its _internal/ libraries,
+# which is exactly the directory electron-builder bundles.
 dist_dir="dist/report_generator_backend"
-if [ -f "dist/report_generator_backend" ]; then
-    mv "dist/report_generator_backend" "dist/report_generator_backend.bin"
-    mkdir -p "$dist_dir"
-    mv "dist/report_generator_backend.bin" "$dist_dir/report_generator_backend"
-elif [ -f "$dist_dir/report_generator_backend" ]; then
-    : # already in the expected layout
-else
-    echo "Backend executable not found after PyInstaller build." >&2
+if [ ! -f "$dist_dir/report_generator_backend" ]; then
+    echo "Backend executable not found after PyInstaller build: $dist_dir/report_generator_backend" >&2
     ls -la dist || true
     exit 1
 fi
 chmod +x "$dist_dir/report_generator_backend"
 
-# Copy only the directories that exist
+# Copy only the directories that exist.
+# NOTE: backend/data (the live dev database, uploads and rotating backups) is
+# deliberately NOT copied — see pyinstaller.spec. The app creates a fresh,
+# empty data directory itself via init_db() at runtime.
 copy_if_exists() {
     local source="$1" destination="$2"
     if [ -e "$source" ]; then
@@ -52,7 +48,6 @@ copy_if_exists() {
     fi
 }
 
-copy_if_exists "backend/data" "$dist_dir/backend/data"
 copy_if_exists "backend/ollama_models" "$dist_dir/backend/ollama_models"
 copy_if_exists "backend/database" "$dist_dir/backend/database"
 copy_if_exists "backend/templates" "$dist_dir/backend/templates"

@@ -133,6 +133,12 @@ async function importOllamaModelsFromFolder(destModelsDir) {
 }
 
 async function promptOllamaModelSetup(ollamaExePath, ollamaDir, destModelsDir) {
+  // Automated smoke tests have nobody to click the dialog, and the backend only
+  // starts once it is answered; this takes the "Continue without AI" path.
+  if (process.env.PSYCHREPORT_SKIP_MODEL_PROMPT === '1') {
+    logToFile('PSYCHREPORT_SKIP_MODEL_PROMPT=1: not prompting for the AI model.');
+    return false;
+  }
   if (!mainWindow || mainWindow.isDestroyed()) return false;
 
   const msg = `The required AI model "${REQUIRED_OLLAMA_MODEL}" is not installed.\n\nYou can download it now (requires internet) or import an offline model pack.`;
@@ -670,8 +676,15 @@ function startBackend(envOverrides = {}) {
     };
     
     process.on('exit', cleanup);
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    // A kill signal must quit the whole app: handling it by only stopping the
+    // backend would swallow the signal, leave the app running, and orphan Ollama.
+    // app.quit() runs the normal shutdown (will-quit stops the backend and Ollama).
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+      process.on(signal, () => {
+        logToFile(`Received ${signal}; quitting.`);
+        app.quit();
+      });
+    }
 
   } catch (error) {
     logToFile(`Failed to start backend: ${error.message}`);
@@ -1117,14 +1130,12 @@ app.on('window-all-closed', () => {
   logToFile('All windows closed');
   stopBackendSync();
   stopOllama();
-  
-  // On macOS it's common for applications to stay open until the user quits explicitly
-  if (process.platform !== 'darwin') {
-    logToFile('Quitting application');
-    app.quit();
-  } else {
-    logToFile('App remains active (macOS)');
-  }
+
+  // Quit on every platform, macOS included. The backend and Ollama are stopped
+  // just above and are only ever started once at launch, so an app left alive in
+  // the Dock would reopen to a window with nothing behind it.
+  logToFile('Quitting application');
+  app.quit();
 });
 
 // Handle app quit
