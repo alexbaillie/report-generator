@@ -7,12 +7,17 @@ name: Build macOS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Attach the verified installers to this existing GitHub release (e.g. v1.1.0-beta). Leave empty to only build."
+        required: false
+        default: ""
   push:
     tags:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write   # only used to attach installers to a release when release_tag is given
 
 env:
   # The Ollama release bundled in the Windows installer; macOS uses the same one.
@@ -118,6 +123,13 @@ jobs:
 
       - name: AI generation with the bundled Ollama
         run: bash .github/scripts/ai_generation_check_macos.sh "$APP"
+
+      - name: Attach the installer to the release
+        # Only reached if every check above passed, so only a verified build is published.
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" frontend/release/*.dmg --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Upload the installer
         if: success() || failure()
