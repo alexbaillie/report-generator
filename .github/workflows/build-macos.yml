@@ -1,14 +1,41 @@
 name: Build macOS
 
+# Builds the macOS app (Apple Silicon and Intel) and proves it works on a real
+# macOS machine: backend tests, the packaged backend, the packaged app (start,
+# use, quit, nothing left running) and the bundled Ollama. Download the .dmg
+# from the run's artifacts; tag pushes (v*) build too.
+
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Attach the verified installers to this existing GitHub release (e.g. v1.1.0-beta). Leave empty to only build."
+        required: false
+        default: ""
   push:
     tags:
       - "v*"
 
+permissions:
+  contents: write   # only used to attach installers to a release when release_tag is given
+
+env:
+  # The Ollama release bundled in the Windows installer; macOS uses the same one.
+  OLLAMA_VERSION: v0.33.1
+
 jobs:
   build-macos:
-    runs-on: macos-latest
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -25,56 +52,99 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pyinstaller
+          pip install -r backend/requirements.txt pyinstaller
 
-      - name: Build backend (PyInstaller spec)
+      - name: Backend tests
+        working-directory: backend
+        run: python -m pytest tests -q
+
+      - name: Build the backend (PyInstaller, one-folder)
+        run: bash build_exe.sh
+
+      - name: Smoke-test the packaged backend
         run: |
-          pyinstaller --noconfirm pyinstaller.spec
-
-      - name: Normalize backend output into dist/report_generator_backend
-        shell: bash
-        run: |
-          # PyInstaller spec currently produces a single-file executable named "dist/report_generator_backend"
-          # electron-builder expects a DIRECTORY at "../dist/report_generator_backend" (from frontend/package.json).
-          if [ -f "dist/report_generator_backend" ]; then
-            mv "dist/report_generator_backend" "dist/report_generator_backend.bin"
-            mkdir -p "dist/report_generator_backend"
-            mv "dist/report_generator_backend.bin" "dist/report_generator_backend/report_generator_backend"
-          fi
-
-          if [ ! -d "dist/report_generator_backend" ]; then
-            echo "Expected dist/report_generator_backend directory not found"
-            ls -la dist || true
-            exit 1
-          fi
-
-          ls -la dist/report_generator_backend
+          (cd dist/report_generator_backend && ./report_generator_backend > "$RUNNER_TEMP/backend.log" 2>&1 &)
+          python .github/scripts/smoke_test_backend.py --base http://127.0.0.1:8000 || { tail -n 60 "$RUNNER_TEMP/backend.log"; exit 1; }
+          pkill -f report_generator_backend || true
+          test -f "$HOME/Library/Application Support/PsychReportGen/data/reports.db"
+          rm -rf "$HOME/Library/Application Support/PsychReportGen"
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Build frontend
+      - name: Build the frontend
         working-directory: frontend
         run: npm run build
 
-      # IMPORTANT: do NOT run `npm run electron:build` on macOS because it triggers
-      # `preelectron:build` which is a PowerShell script.
-      - name: Build Electron macOS artifact(s)
-        working-directory: frontend
-        run: npx electron-builder --mac
+      - name: Download the Ollama macOS runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p ollama/mac
+          for attempt in 1 2 3; do
+            gh release download "$OLLAMA_VERSION" --repo ollama/ollama --pattern ollama-darwin.tgz \
+              --dir "$RUNNER_TEMP" --clobber && break
+            echo "download attempt $attempt failed"; sleep 10
+          done
+          tar -xzf "$RUNNER_TEMP/ollama-darwin.tgz" -C ollama/mac
+          chmod +x ollama/mac/ollama ollama/mac/llama-server ollama/mac/llama-quantize
+          echo "Ollama $OLLAMA_VERSION architectures: $(lipo -archs ollama/mac/ollama)"
+          ls ollama/mac | head -40
 
-      - name: Upload artifacts
+      - name: Build the Electron app
+        working-directory: frontend
+        env:
+          # No Apple Developer certificate: afterPack.js ad-hoc signs the app instead.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          # Spotlight indexing a freshly mounted disk image is what makes the DMG step
+          # fail with 'hdiutil: couldn't eject ... Resource busy' on these runners.
+          sudo mdutil -a -i off || true
+          for attempt in 1 2 3; do
+            if npx electron-builder --mac --${{ matrix.arch }}; then exit 0; fi
+            echo "electron-builder attempt $attempt failed (typically the DMG 'Resource busy' flake); retrying"
+            rm -f release/*.dmg release/*.blockmap
+            sleep 15
+          done
+          exit 1
+
+      - name: Inspect the app bundle
+        run: |
+          APP="$(find frontend/release -maxdepth 2 -name 'PsychReportGen.app' | head -1)"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          echo "architecture: $(lipo -archs "$APP/Contents/MacOS/PsychReportGen")"
+          codesign -dv "$APP" 2>&1 | head -8 || true
+          echo "--- strict signature verification (informational) ---"
+          codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -8 || true
+          echo "--- Gatekeeper assessment (an unnotarized app is expected to be rejected) ---"
+          spctl --assess --type execute -vv "$APP" 2>&1 | head -5 || true
+          ls -la frontend/release/*.dmg
+
+      - name: Smoke-test the packaged app (start, use, quit)
+        run: bash .github/scripts/smoke_test_app_macos.sh "$APP"
+
+      - name: AI generation with the bundled Ollama
+        run: bash .github/scripts/ai_generation_check_macos.sh "$APP"
+
+      - name: Attach the installer to the release
+        # Only reached if every check above passed, so only a verified build is published.
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" frontend/release/*.dmg --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload the installer
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifacts
-          path: |
-            frontend/release/*.dmg
-            frontend/release/*.zip
-            frontend/release/*.yml
-            frontend/release/latest-mac.yml
+          name: PsychReportGen-mac-${{ matrix.arch }}
+          path: frontend/release/*.dmg
+          if-no-files-found: warn
