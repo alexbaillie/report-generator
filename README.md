@@ -6,7 +6,7 @@ A local-first desktop application for generating psychological reports using loc
 
 - 📝 Generate psychological reports from session notes and test results
 - 🔒 Local-first (offline by default) with local storage
-- 🤖 AI-powered report generation using Ollama (Llama 3.1 8B)
+- 🤖 AI-powered report generation using Meta's Llama 3.1 8B, run locally with Ollama
 - 📄 Document upload and processing
 - 💾 Local SQLite database (encryption is planned)
 - 🎨 Modern UI built with React and TailwindCSS
@@ -17,7 +17,7 @@ A local-first desktop application for generating psychological reports using loc
 - **Desktop**: Electron
 - **Backend**: FastAPI (Python)
 - **Database**: SQLite (encryption planned)
-- **AI**: Ollama (Llama 3.1 8B model)
+- **AI**: Ollama running Meta's Llama 3.1 8B (`llama3.1:8b`) on the user's own computer
 - **Testing**: Jest, React Testing Library, Pytest
 
 ## Prerequisites
@@ -36,7 +36,7 @@ A local-first desktop application for generating psychological reports using loc
 ollama pull llama3.1:8b
 ```
 
-For packaged desktop builds (the Windows installer), the Ollama runtime is bundled with the app. If the model is missing, the app will prompt the user to download `llama3.1:8b` (requires internet) or import an offline models folder.
+For packaged desktop builds (Windows and macOS), the Ollama runtime is bundled with the app. If the model is missing, the app prompts the user to download `llama3.1:8b` (about 4.9 GB, one time, requires internet) or import an offline models folder. If Ollama is already running on the computer with the model installed, the app uses that instead. See [AI model](#ai-model).
 
 ### 2. Install Python dependencies
 
@@ -51,6 +51,16 @@ pip install -r requirements.txt
 cd frontend
 npm install
 ```
+
+## AI model
+
+Reports are written by **Meta's Llama 3.1 8B** (`llama3.1:8b`, 4-bit quantised), run locally through [Ollama](https://ollama.com). Nothing is sent to a cloud service.
+
+- **Download:** about 4.9 GB, one time. After that the app works fully offline.
+- **Memory:** about 6 GB of free memory (RAM, or GPU memory) while it is generating.
+- **Speed:** a GPU, or an Apple Silicon Mac, makes generation much faster. A computer with no GPU still works but is noticeably slower, and so are Intel Macs.
+- **Where the model is set:** once per context, so the two can't drift apart. `REQUIRED_OLLAMA_MODEL` in `frontend/electron/main.js` drives the packaged app (it provisions the model and passes it to the backend as `OLLAMA_MODEL`). When running the backend directly in development, set the `OLLAMA_MODEL` environment variable; it defaults to `llama3.1:8b`.
+- **Output is a draft.** AI-generated text must be reviewed by a licensed clinician before use.
 
 ## Development
 
