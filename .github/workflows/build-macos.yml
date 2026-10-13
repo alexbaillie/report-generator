@@ -104,7 +104,17 @@ jobs:
         env:
           # No Apple Developer certificate: afterPack.js ad-hoc signs the app instead.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npx electron-builder --mac --${{ matrix.arch }}
+        run: |
+          # Spotlight indexing a freshly mounted disk image is what makes the DMG step
+          # fail with 'hdiutil: couldn't eject ... Resource busy' on these runners.
+          sudo mdutil -a -i off || true
+          for attempt in 1 2 3; do
+            if npx electron-builder --mac --${{ matrix.arch }}; then exit 0; fi
+            echo "electron-builder attempt $attempt failed (typically the DMG 'Resource busy' flake); retrying"
+            rm -f release/*.dmg release/*.blockmap
+            sleep 15
+          done
+          exit 1
 
       - name: Inspect the app bundle
         run: |
