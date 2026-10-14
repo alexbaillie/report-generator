@@ -13,6 +13,8 @@ on:
         required: false
         default: ""
   push:
+    branches:
+      - linux-build   # TEMPORARY: lets the branch run before the workflow is on the default branch
     tags:
       - "v*"
 
