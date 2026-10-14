@@ -1,4 +1,5 @@
-// electron-builder afterPack hook (macOS only; a no-op on every other platform).
+// electron-builder afterPack hook. macOS: ad-hoc signing (below). Linux: launcher
+// wrapper with a sandbox fallback (packLinux). Windows: a no-op.
 //
 // We have no Apple Developer certificate, so the app is ad-hoc signed. That still
 // matters:
@@ -49,7 +50,47 @@ function codesign(args) {
   execFileSync('codesign', ['--force', '--sign', '-', '--timestamp=none', ...args], { stdio: 'pipe' });
 }
 
+// Linux: Chromium's sandbox needs unprivileged user namespaces, which Ubuntu 23.10+
+// (AppArmor) and some containers block, and an Electron app that can't create its
+// sandbox refuses to start. So the real executable is renamed and a small launcher
+// takes its place: it keeps the sandbox whenever it works and falls back to
+// --no-sandbox only when it can't (this app loads only its own bundled pages and
+// localhost, never remote content). PSYCHREPORT_NO_SANDBOX=1 forces the fallback.
+const LINUX_LAUNCHER = (binName) => `#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+flag=""
+if [ "\${PSYCHREPORT_NO_SANDBOX:-}" = "1" ]; then
+  flag="--no-sandbox"
+elif ! unshare --user --map-root-user --mount true >/dev/null 2>&1; then
+  flag="--no-sandbox"
+fi
+exec "$HERE/${binName}" $flag "$@"
+`;
+
+function packLinux(context) {
+  const exeName = context.packager.executableName;
+  if (!exeName) throw new Error('[afterPack] no Linux executableName configured');
+  const exePath = path.join(context.appOutDir, exeName);
+  const binName = `${exeName}-bin`;
+  if (!fs.existsSync(exePath)) throw new Error(`[afterPack] Linux executable not found at ${exePath}`);
+
+  fs.renameSync(exePath, path.join(context.appOutDir, binName));
+  fs.writeFileSync(exePath, LINUX_LAUNCHER(binName), { mode: 0o755 });
+  fs.chmodSync(exePath, 0o755);
+
+  const resourcesDir = path.join(context.appOutDir, 'resources');
+  for (const rel of [path.join('report_generator_backend', 'report_generator_backend'), path.join('ollama', 'bin', 'ollama')]) {
+    const file = path.join(resourcesDir, rel);
+    if (fs.existsSync(file)) fs.chmodSync(file, 0o755);
+  }
+  if (!fs.existsSync(path.join(resourcesDir, 'report_generator_backend', 'report_generator_backend'))) {
+    throw new Error('[afterPack] backend binary missing from the Linux build');
+  }
+  console.log(`[afterPack] Linux launcher installed: ${exeName} -> ${binName}`);
+}
+
 module.exports = async function afterPack(context) {
+  if (context.electronPlatformName === 'linux') return packLinux(context);
   if (context.electronPlatformName !== 'darwin') return;
 
   const appName = context.packager.appInfo.productFilename;

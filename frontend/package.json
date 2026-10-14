@@ -112,6 +112,9 @@
     "linux": {
       "target": ["AppImage"],
       "icon": "assets/icon.png",
+      "executableName": "psychreportgen",
+      "category": "Office",
+      "artifactName": "PsychReportGen-${version}-linux-${arch}.${ext}",
       "extraResources": [
         {
           "from": "../ollama/linux",
