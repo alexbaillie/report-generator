@@ -318,7 +318,8 @@ function getOllamaPlatformInfo() {
     case 'darwin':
       return { subdir: 'mac', exeName: 'ollama' };
     case 'linux':
-      return { subdir: 'linux', exeName: 'ollama' };
+      // Ollama's Linux release is bin/ollama + lib/ollama/ (it finds its libraries at ../lib/ollama)
+      return { subdir: 'linux', exeName: path.join('bin', 'ollama') };
     default:
       return null;
   }
