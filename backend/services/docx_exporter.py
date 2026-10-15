@@ -12,7 +12,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from lxml import etree
 
-from services.docx_test_results import apply_test_results
+from services.docx_test_results import apply_test_results, keep_when_section_is_generated
 
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -522,8 +522,8 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets)
             ),
             heading,
         )
-        for element in interval:
-            if element.tag == f"{{{W_NS}}}p":
+        for position_in_interval, element in enumerate(interval):
+            if element.tag == f"{{{W_NS}}}p" and not keep_when_section_is_generated(interval, position_in_interval):
                 body.remove(element)
 
         anchor = heading

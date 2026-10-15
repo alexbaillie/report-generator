@@ -67,6 +67,31 @@ _ROMAN = {"i": "1", "ii": "2", "iii": "3", "iv": "4", "v": "5", "vi": "6"}
 
 
 # --------------------------------------------------------------------------- #
+# what survives when a generated section replaces the template's prose
+# --------------------------------------------------------------------------- #
+def keep_when_section_is_generated(interval: Sequence, index: int) -> bool:
+    """A generated section replaces the template's paragraphs, but the scaffolding of
+    the score tables has to stay or the tables are left unlabelled and the test's
+    block can no longer be found: the short caption above a table ("WISC-V Index
+    Scores Summary"), a test's own heading ("WISC-V", "WAIS-IV"), and a graph
+    placeholder. ``interval`` is the section's body children, ``index`` the paragraph."""
+    element = interval[index]
+    raw = _text(element)
+    if not raw or len(raw) > HEADING_MAX_CHARS:
+        return False
+    if _PLACEHOLDER.match(raw):
+        return True
+    if _has_other_test(raw, ""):
+        return True  # names a known test: a test heading such as "WISC-V" or "CVLT-C Auditory Memory Scores"
+    for following in interval[index + 1:]:
+        if following.tag == TBL:
+            return True  # a caption directly above a table
+        if following.tag != P or _text(following):
+            return False
+    return False
+
+
+# --------------------------------------------------------------------------- #
 # public API
 # --------------------------------------------------------------------------- #
 def apply_test_results(

@@ -320,8 +320,9 @@ def export_generated(title, *groups, report=None):
 def test_only_the_named_versions_tables_are_filled_when_the_templates_headings_are_gone():
     from services.docx_test_results import _norm, _text
     baseline = export_generated(PSYCHED)
-    # sanity: the headings really are gone in this scenario
-    assert not any(_norm(_text(el)) == "wisc5" for el in baseline.element.body)
+    # the template's test headings and table captions survive a generated section...
+    assert any(_norm(_text(el)) == "wisc5" for el in baseline.element.body)
+    assert any(_text(el) == "WISC-V Index Scores Summary" for el in baseline.element.body)
 
     report = []
     doc = export_generated(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
@@ -340,3 +341,33 @@ def test_a_request_for_another_version_never_writes_into_tables_headed_with_a_di
         header = table.rows[0].cells[0].text.replace(chr(10), " ")
         if header.startswith(("WISC-V", "WAIS-IV")):
             assert not any(c.text.strip() == "101" for row in table.rows for c in row.cells), header
+
+
+def test_tables_are_still_found_by_their_headers_if_every_paragraph_is_gone():
+    from services.docx_exporter import PSYCHED_SECTION_TARGETS
+    from services.docx_test_results import TBL, apply_test_results
+
+    stream = create_report_docx(title=PSYCHED, patient_name="Alex Test", report_type="x", content=GENERATED)
+    bare = Document(io.BytesIO(stream.getvalue()))
+    for element in list(bare.element.body):
+        if element.tag == qn("w:p"):
+            element.getparent().remove(element)
+    assert any(el.tag == TBL for el in bare.element.body)
+    out = io.BytesIO()
+    bare.save(out)
+    out.seek(0)
+
+    report = []
+    filled = Document(apply_test_results(
+        out, [{"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}],
+        PSYCHED_SECTION_TARGETS, report))
+    assert report[0]["result"] == "filled"
+    rows = [[c.text.strip() for c in r.cells] for t in filled.tables for r in t.rows
+            if r.cells[0].text.strip().startswith("Verbal Comprehension (VCI)")]
+    assert sum(1 for r in rows if r[1] == "101") == 1
+
+
+def test_generated_cdbc_report_fills_the_templates_wisc_tables():
+    report = []
+    doc = export_generated(CDBC, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
+    assert report[0]["result"] == "filled" and report[0]["filled"] >= 10
