@@ -15,7 +15,8 @@ matched is left blank and *reported*:
 * a column is only filled from the same kind of score (a "Scaled Score" column from
   a scaled score, a "Standard Score" column from a standard/composite/index score);
 * only empty cells are filled, and existing text is never overwritten;
-* "-" in the score report means not administered: the cell stays blank;
+* "-" in the score report means not administered: the row's first score cell says
+  "Not assessed" and the rest stay blank;
 * if two score-report rows claim the same code with different values, neither is used.
 """
 from __future__ import annotations
@@ -28,6 +29,7 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+NOT_ASSESSED = "Not assessed"
 DASHES = {"-", "–", "—", "n/a", "na", "--"}
 
 # Header text (whitespace/punctuation stripped, lowercase) -> the kind of score.
@@ -168,6 +170,7 @@ def parse_source_tables(tables: Iterable[Mapping]) -> List[SourceRecord]:
 @dataclass
 class FillStats:
     filled: int = 0
+    marked_not_assessed: int = 0
     tables_seen: int = 0
     tables_filled: int = 0
     not_administered: List[str] = field(default_factory=list)   # in the score report, but "-"
@@ -288,7 +291,14 @@ def fill_template_tables(shell_tables: Sequence, records: Sequence[SourceRecord]
                 continue
             used.add(id(found))
             if not found.administered:
+                # The score report has the row but marks it "-": say so in the first
+                # blank score cell so the table never looks like a forgotten blank.
                 stats.not_administered.append(label)
+                for col in sorted(header_fields):
+                    if not _cell_text(cells[col]):
+                        _set_cell_text(cells[col], NOT_ASSESSED)
+                        stats.marked_not_assessed += 1
+                        break
                 continue
             for col, kind in header_fields.items():
                 if _cell_text(cells[col]):
@@ -323,6 +333,7 @@ def summarize(stats: FillStats, limit: int = 12) -> dict:
 
     return {
         "filled": stats.filled,
+        "marked_not_assessed": stats.marked_not_assessed,
         "tables_filled": stats.tables_filled,
         "not_administered": cap(stats.not_administered),
         "not_in_report": cap(stats.not_in_report),

@@ -182,7 +182,7 @@ export function describeFill(summary: FillSummary): string[] {
     lines.push(`${summary.test_name}: the template has no section for this test, so its results were added as a new block.`);
   }
   const notes: Array<[string[] | undefined, string]> = [
-    [summary.not_administered, 'Marked "-" in the score report, left blank'],
+    [summary.not_administered, 'Marked "-" in the score report, shown as "Not assessed"'],
     [summary.not_in_template, 'In the score report but not in the template tables (not added)'],
     [summary.not_in_report, 'In the template but not found in the score report, left blank'],
     [summary.ambiguous, 'The score report gave conflicting values, left blank'],

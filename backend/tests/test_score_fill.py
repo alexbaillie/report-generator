@@ -141,14 +141,14 @@ def test_fill_keeps_the_templates_tables_and_fills_only_the_blank_score_cells():
     assert report[0]["result"] == "filled" and report[0]["filled"] >= 12
 
 
-def test_scores_marked_with_a_dash_are_not_entered_and_are_reported():
+def test_scores_marked_with_a_dash_say_not_assessed_and_are_reported():
     report = []
     doc = export(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
-    # Working Memory was not administered: its template row stays blank
-    assert all(r[1:] == ["", "", "", ""] for r in rows_with(doc, "Working Memory (WMI)") if len(r) == 5)
-    assert "Digit Span (DS)" in " ".join(report[0]["not_administered"]) or any(
-        "Working Memory" in n for n in report[0]["not_administered"]
-    )
+    # Working Memory was not administered: its template row says so, with no numbers
+    marked = [r for r in rows_with(doc, "Working Memory (WMI)") if "Not assessed" in r]
+    assert len(marked) == 1 and marked[0][1:] == ["Not assessed", "", "", ""]
+    assert any("Working Memory" in n for n in report[0]["not_administered"])
+    assert report[0]["marked_not_assessed"] >= 1
 
 
 def test_only_blank_cells_are_filled_never_existing_text():
