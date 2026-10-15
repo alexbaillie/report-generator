@@ -3,9 +3,12 @@
 Items come back in document order so they can be dropped into a report in the
 same order the psychologist sees them in the score report:
 
-    {"kind": "table", "caption": str, "rows": [[str, ...], ...]}
+    {"kind": "table", "caption": str, "rows": [[str, ...], ...],
+     "merges": [[row, col, rowspan, colspan], ...],   # only when cells are merged
+     "widths": [int, ...]}                            # relative column widths, when known
     {"kind": "image", "caption": str, "content_type": "image/png"|"image/jpeg",
-     "data_b64": str, "width": int, "height": int}
+     "data_b64": str, "width": int, "height": int,
+     "suggested": False}   # only set when it probably isn't a graph (a cover picture or logo)
 
 Anything that can't be imported is reported in ``warnings`` rather than silently
 dropped, so the user knows to add it by hand.
@@ -51,9 +54,21 @@ def extract_score_report(path: Path, content_type: Optional[str] = None) -> Dict
 
     if not items and not warnings:
         warnings.append("No tables or graphs were found in this file.")
+    _flag_cover_pictures(items)
     for index, item in enumerate(items):
         item["id"] = f"item-{index}"
     return {"items": items, "warnings": warnings}
+
+
+def _flag_cover_pictures(items: List[dict]) -> None:
+    """Score reports open with a logo or cover picture; the real graphs come after
+    the first table. Pictures before the first table aren't pre-selected."""
+    if not any(i["kind"] == "table" for i in items):
+        return
+    for item in items:
+        if item["kind"] == "table":
+            return
+        item["suggested"] = False
 
 
 def html_to_tables(html: str) -> List[dict]:
@@ -70,6 +85,7 @@ def html_to_tables(html: str) -> List[dict]:
         if any(ancestor.tag == "table" for ancestor in table.iterancestors()):
             continue  # nested table: its text is already part of the outer cell
         rows: List[List[str]] = []
+        merges: List[List[int]] = []
         for tr in table.iter("tr"):
             if tr.getparent() is not None and next(
                 (a for a in tr.iterancestors() if a.tag == "table"), None
@@ -79,13 +95,15 @@ def html_to_tables(html: str) -> List[dict]:
             for cell in tr:
                 if cell.tag not in ("td", "th"):
                     continue
-                cells.append(_clean_text(cell.text_content()))
                 span = _to_int(cell.get("colspan"), 1)
+                if span > 1:
+                    merges.append([len(rows), len(cells), 1, span])
+                cells.append(_clean_text(cell.text_content()))
                 cells.extend([""] * (span - 1))
             rows.append(cells)
-        rows = _finish_rows(rows)
-        if rows:
-            tables.append({"kind": "table", "caption": "", "rows": rows})
+        finished = _finish_table(rows, merges)
+        if finished:
+            tables.append({"kind": "table", "caption": "", **finished})
     return tables
 
 
@@ -106,15 +124,30 @@ def _to_int(value, default: int) -> int:
         return default
 
 
-def _finish_rows(rows: List[List[str]]) -> List[List[str]]:
-    """Drop blank rows, pad to a rectangle, and reject non-data 'layout' tables."""
-    rows = [r for r in rows if any(c.strip() for c in r)]
-    if len(rows) < 2:
-        return []
-    width = max(len(r) for r in rows)
+def _finish_table(
+    rows: List[List[str]], merges: Optional[List[List[int]]] = None, widths: Optional[List[int]] = None
+) -> Optional[dict]:
+    """Drop blank rows, pad to a rectangle, and reject non-data 'layout' tables.
+    Returns {"rows", optional "merges", optional "widths"} or None."""
+    kept = [i for i, r in enumerate(rows) if any(c.strip() for c in r)]
+    if len(kept) < 2:
+        return None
+    width = max(len(rows[i]) for i in kept)
     if width < 2:
-        return []
-    return [r + [""] * (width - len(r)) for r in rows]
+        return None
+    new_index = {old: new for new, old in enumerate(kept)}
+    result: dict = {"rows": [rows[i] + [""] * (width - len(rows[i])) for i in kept]}
+
+    remapped = []
+    for r, c, rowspan, colspan in merges or []:
+        covered = [new_index[x] for x in range(r, r + rowspan) if x in new_index]
+        if covered and c + colspan <= width and (len(covered) > 1 or colspan > 1):
+            remapped.append([covered[0], c, len(covered), colspan])
+    if remapped:
+        result["merges"] = remapped
+    if widths and len(widths) == width and all(w > 0 for w in widths):
+        result["widths"] = widths
+    return result
 
 
 def _normalize_image(data: bytes) -> Optional[Tuple[bytes, str, int, int]]:
@@ -223,9 +256,9 @@ def _extract_docx(path: Path) -> Tuple[List[dict], List[str]]:
             if text:
                 caption = text if len(text) <= CAPTION_MAX_CHARS else ""
         elif child.tag == qn("w:tbl"):
-            rows = _finish_rows(_docx_table_rows(child, qn, paragraph_text))
-            if rows:
-                items.append({"kind": "table", "caption": caption, "rows": rows})
+            table = _finish_table(*_docx_table(child, qn, paragraph_text))
+            if table:
+                items.append({"kind": "table", "caption": caption, **table})
                 caption = ""
 
     warnings: List[str] = []
@@ -241,18 +274,57 @@ def _extract_docx(path: Path) -> Tuple[List[dict], List[str]]:
     return items, warnings
 
 
-def _docx_table_rows(tbl, qn, paragraph_text) -> List[List[str]]:
+def _docx_table(tbl, qn, paragraph_text):
+    """(rows, merges, widths) for a Word table. Merged cells are padded with empty
+    strings so every row has the same columns; ``merges`` records the real shape."""
     rows: List[List[str]] = []
-    for tr in tbl.findall(qn("w:tr")):
+    merges: List[List[int]] = []
+    open_v: Dict[int, List[int]] = {}  # grid column -> [start_row, colspan, rowspan]
+
+    def close(col):
+        start, colspan, rowspan = open_v.pop(col)
+        if rowspan > 1 or colspan > 1:
+            merges.append([start, col, rowspan, colspan])
+
+    for r, tr in enumerate(tbl.findall(qn("w:tr"))):
         cells: List[str] = []
+        col = 0
+        continued = set()
         for tc in tr.findall(qn("w:tc")):
-            text = "\n".join(t for t in (paragraph_text(p) for p in tc.findall(qn("w:p"))) if t)
+            span, vmerge = 1, None
+            tc_pr = tc.find(qn("w:tcPr"))
+            if tc_pr is not None:
+                grid_span = tc_pr.find(qn("w:gridSpan"))
+                if grid_span is not None:
+                    span = _to_int(grid_span.get(qn("w:val")), 1)
+                v = tc_pr.find(qn("w:vMerge"))
+                if v is not None:
+                    vmerge = v.get(qn("w:val")) or "continue"
+            if vmerge == "continue" and col in open_v:
+                open_v[col][2] += 1
+                continued.add(col)
+                text = ""
+            else:
+                if col in open_v:
+                    close(col)
+                text = "\n".join(t for t in (paragraph_text(p) for p in tc.findall(qn("w:p"))) if t)
+                if vmerge == "restart":
+                    open_v[col] = [r, span, 1]
+                    continued.add(col)
+                elif span > 1:
+                    merges.append([r, col, 1, span])
             cells.append(text)
-            grid_span = tc.find(qn("w:tcPr") + "/" + qn("w:gridSpan"))
-            if grid_span is not None:
-                cells.extend([""] * (_to_int(grid_span.get(qn("w:val")), 1) - 1))
+            cells.extend([""] * (span - 1))
+            col += span
+        for open_col in [c for c in open_v if c not in continued]:
+            close(open_col)  # the merge ended on the previous row
         rows.append(cells)
-    return rows
+    for open_col in list(open_v):
+        close(open_col)
+
+    grid = tbl.find(qn("w:tblGrid"))
+    widths = [_to_int(g.get(qn("w:w")), 0) for g in grid.findall(qn("w:gridCol"))] if grid is not None else []
+    return rows, merges, widths
 
 
 # --------------------------------------------------------------------------- #
@@ -280,12 +352,12 @@ def _extract_pdf(path: Path) -> Tuple[List[dict], List[str]]:
                 found_tables = []
             for table in found_tables:
                 try:
-                    rows = _finish_rows([[_clean_text(c or "") for c in row] for row in table.extract()])
+                    finished = _finish_table([[_clean_text(c or "") for c in row] for row in table.extract()])
                 except Exception:
                     continue
-                if rows:
+                if finished:
                     page_items.append(
-                        (table.bbox[1], {"kind": "table", "caption": _pdf_caption(page, table.bbox), "rows": rows})
+                        (table.bbox[1], {"kind": "table", "caption": _pdf_caption(page, table.bbox), **finished})
                     )
 
             for image in page.images:

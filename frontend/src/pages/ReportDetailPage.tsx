@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Pencil, Save, X } from 'lucide-react';
 import { api } from '../services/api';
-import { describeCounts } from '../utils/testResults';
+import { FillSummary, describeCounts, describeFill, parseFillHeader } from '../utils/testResults';
 
 interface Report {
   id: number;
@@ -27,6 +27,7 @@ export default function ReportDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [fillSummaries, setFillSummaries] = useState<FillSummary[]>([]);
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftPatient, setDraftPatient] = useState('');
@@ -85,12 +86,14 @@ export default function ReportDetailPage() {
     if (!report) return;
     setExporting(true);
     setExportError(null);
+    setFillSummaries([]);
     try {
       const response = await api.exportReportDocx(report.id);
       const filename = filenameFromDisposition(
         response.headers['content-disposition'],
         `${report.title || 'report'}.docx`
       );
+      setFillSummaries(parseFillHeader(response.headers['x-score-fill']));
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -253,6 +256,18 @@ export default function ReportDetailPage() {
         </div>
         {exportError && (
           <div className="text-sm text-red-400">{exportError}</div>
+        )}
+        {fillSummaries.length > 0 && (
+          <div className="rounded border border-dark-600 p-3 text-sm text-gray-200" data-testid="score-fill-summary">
+            <div className="text-white mb-1">Check the score tables in the Word file:</div>
+            {fillSummaries.map((summary) => (
+              <ul key={summary.test_name} className="list-disc ml-5 mb-2 text-gray-300">
+                {describeFill(summary).map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            ))}
+          </div>
         )}
         {saveError && (
           <div className="text-sm text-red-400">{saveError}</div>

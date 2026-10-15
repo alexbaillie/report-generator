@@ -36,7 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
     # Expose the download filename to the browser for DOCX export.
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Score-Fill"],
 )
 
 # Include routers

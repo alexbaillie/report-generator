@@ -4,10 +4,15 @@ import {
   buildTestResults,
   countItems,
   describeCounts,
+  describeFill,
   entriesMissingATest,
   hasAttachedResults,
+  headerRows,
   isScoreReportFile,
+  isSuggested,
+  parseFillHeader,
   resolveTestName,
+  tableCells,
 } from '../testResults';
 
 const table = (id: string, selected = true): ScoreItem => ({
@@ -83,5 +88,75 @@ describe('helpers', () => {
     expect(isScoreReportFile({ name: 'scores.pdf' })).toBe(true);
     expect(isScoreReportFile({ name: 'scores.csv' })).toBe(false);
     expect(hasAttachedResults(entry())).toBe(false);
+  });
+});
+
+describe('placement mode', () => {
+  it('defaults to filling the template and sends the chosen mode', () => {
+    expect(buildTestResults([entry({ items: [table('t1')] })])[0].mode).toBe('fill');
+    expect(buildTestResults([entry({ items: [table('t1')], mode: 'insert' })])[0].mode).toBe('insert');
+  });
+
+  it('sends merges and widths along with the rows', () => {
+    const merged: ScoreItem = { ...table('t1'), merges: [[0, 0, 1, 2]], widths: [3, 4] };
+    const [item] = buildTestResults([entry({ items: [merged] })])[0].items;
+    expect(item.merges).toEqual([[0, 0, 1, 2]]);
+    expect(item.widths).toEqual([3, 4]);
+  });
+});
+
+describe('isSuggested', () => {
+  it('only unticks items the extractor flagged', () => {
+    expect(isSuggested({})).toBe(true);
+    expect(isSuggested({ suggested: true })).toBe(true);
+    expect(isSuggested({ suggested: false })).toBe(false);
+  });
+});
+
+describe('tableCells', () => {
+  it('drops merged-over cells and carries the spans', () => {
+    const rows = [['Title', '', ''], ['a', 'b', 'c'], ['x', '', 'z']];
+    const cells = tableCells(rows, [[0, 0, 1, 3], [1, 0, 2, 1]]);
+    expect(cells[0]).toEqual([{ text: 'Title', col: 0, rowSpan: 1, colSpan: 3 }]);
+    expect(cells[1].map((c) => c.text)).toEqual(['a', 'b', 'c']);
+    expect(cells[1][0].rowSpan).toBe(2);
+    expect(cells[2].map((c) => c.text)).toEqual(['', 'z']); // col 0 is covered by the row span above
+  });
+
+  it('clamps a span that runs past the rows shown', () => {
+    const cells = tableCells([['a', 'b'], ['', 'c'], ['', 'd']], [[0, 0, 3, 1]], 2);
+    expect(cells[0][0].rowSpan).toBe(2);
+  });
+});
+
+describe('headerRows', () => {
+  it('treats a full-width one-cell title as a title, not the header', () => {
+    const rows = [['Index Scores', '', ''], ['Index', 'Score', 'Percentile'], ['VCI', '100', '50']];
+    expect(headerRows(rows, [[0, 0, 1, 3]])).toEqual({ titles: new Set([0]), header: 1 });
+  });
+
+  it('uses the first row as the header when it has several cells', () => {
+    expect(headerRows([['Index', 'Score'], ['VCI', '100']])).toEqual({ titles: new Set(), header: 0 });
+  });
+});
+
+describe('fill summary', () => {
+  it('parses the response header and ignores junk', () => {
+    expect(parseFillHeader('[{"test_name":"WISC-V","result":"filled","filled":3}]')[0].filled).toBe(3);
+    expect(parseFillHeader('not json')).toEqual([]);
+    expect(parseFillHeader(undefined)).toEqual([]);
+  });
+
+  it('describes what was filled and what was left blank', () => {
+    const lines = describeFill({
+      test_name: 'WISC-V',
+      result: 'filled',
+      filled: 1,
+      not_administered: ['Naming Speed (NSI)'],
+      not_in_template: ['Nonverbal'],
+    });
+    expect(lines[0]).toBe("WISC-V: 1 score filled into the template's own tables.");
+    expect(lines.join('\n')).toContain('Naming Speed (NSI)');
+    expect(lines.join('\n')).toContain('Nonverbal');
   });
 });

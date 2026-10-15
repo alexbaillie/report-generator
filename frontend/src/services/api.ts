@@ -69,6 +69,9 @@ export const api = {
         kind: 'table' | 'image';
         caption: string;
         rows?: string[][];
+        merges?: number[][];
+        widths?: number[];
+        suggested?: boolean;
         content_type?: string;
         data_b64?: string;
         width?: number;

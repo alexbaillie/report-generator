@@ -152,3 +152,33 @@ def test_a_group_with_nothing_in_it_is_ignored(api):
     assert response.status_code == 200
     with Session() as db:
         assert db.query(ReportTestResult).count() == 0
+
+
+def test_export_fills_the_template_and_reports_what_it_did_in_a_header(api):
+    import json
+    from tests.test_score_fill import pearson_index_table
+
+    client, _ = api
+    created = client.post(
+        "/api/reports/generate",
+        json={
+            "title": "Psycho-Educational Assessment - Boy",
+            "patient_name": "Alex Test",
+            "report_type": "psychoeducational",
+            "template_id": _template_id(client),
+            "additional_inputs": {"Report Metadata (Front Page)": "Client Full Name: Alex Test"},
+            # "mode" is left out: filling the template is the default
+            "test_results": [{"test_name": "WISC-V", "items": [pearson_index_table()]}],
+        },
+    )
+    report_id = created.json()["id"]
+
+    exported = client.get(f"/api/reports/{report_id}/export-docx")
+    assert exported.status_code == 200
+    summary = json.loads(exported.headers["x-score-fill"])
+    assert summary[0]["test_name"] == "WISC-V" and summary[0]["result"] == "filled"
+    assert any("Working Memory" in name for name in summary[0]["not_administered"])
+
+    doc = Document(io.BytesIO(exported.content))
+    assert any(r.cells[0].text.startswith("Verbal Comprehension (VCI)") and r.cells[1].text == "101"
+               for t in doc.tables for r in t.rows if len(r.cells) == 5)
