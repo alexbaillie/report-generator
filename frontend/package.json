@@ -1,6 +1,6 @@
 {
   "name": "psychological-report-generator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Offline psychological report generator desktop app",
   "main": "electron/main.js",
   "scripts": {
@@ -67,11 +67,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",
@@ -99,7 +103,9 @@
       "shortcutName": "PsychReportGen"
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "assets/icon.icns",
       "artifactName": "PsychReportGen-${version}-mac-${arch}.${ext}",
       "extraResources": [
@@ -110,7 +116,9 @@
       ]
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "assets/icon.png",
       "executableName": "psychreportgen",
       "category": "Office",
