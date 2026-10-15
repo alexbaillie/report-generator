@@ -180,7 +180,7 @@ class FillStats:
     not_in_template: List[str] = field(default_factory=list)    # administered in the report, no row in the template's tables
 
 
-def _cell_text(tc) -> str:
+def cell_text(tc) -> str:
     parts: List[str] = []
     for p in tc.findall(qn("w:p")):
         pieces = []
@@ -193,7 +193,7 @@ def _cell_text(tc) -> str:
     return re.sub(r"\s+", " ", " ".join(parts).replace("\xa0", " ")).strip()
 
 
-def _set_cell_text(tc, text: str) -> None:
+def _setcell_text(tc, text: str) -> None:
     """Write into a blank cell keeping the template's own formatting: reuse the
     cell's empty run if it has one, otherwise start one from the paragraph mark's
     run properties (where the template stores the cell's font and size)."""
@@ -261,7 +261,7 @@ def fill_template_tables(shell_tables: Sequence, records: Sequence[SourceRecord]
 
         first_cells = rows[0].findall(qn("w:tc"))
         width = len(first_cells)
-        header_fields = {c: header_field(_cell_text(tc)) for c, tc in enumerate(first_cells)}
+        header_fields = {c: header_field(cell_text(tc)) for c, tc in enumerate(first_cells)}
         header_fields = {c: f for c, f in header_fields.items() if f}
         if header_fields:
             data_rows = rows[1:]
@@ -278,7 +278,7 @@ def fill_template_tables(shell_tables: Sequence, records: Sequence[SourceRecord]
             cells = tr.findall(qn("w:tc"))
             if len(cells) != width:
                 continue
-            label = _cell_text(cells[0])
+            label = cell_text(cells[0])
             if not label:
                 continue
             name, code = split_label(label)
@@ -295,13 +295,13 @@ def fill_template_tables(shell_tables: Sequence, records: Sequence[SourceRecord]
                 # blank score cell so the table never looks like a forgotten blank.
                 stats.not_administered.append(label)
                 for col in sorted(header_fields):
-                    if not _cell_text(cells[col]):
-                        _set_cell_text(cells[col], NOT_ASSESSED)
+                    if not cell_text(cells[col]):
+                        _setcell_text(cells[col], NOT_ASSESSED)
                         stats.marked_not_assessed += 1
                         break
                 continue
             for col, kind in header_fields.items():
-                if _cell_text(cells[col]):
+                if cell_text(cells[col]):
                     continue  # never overwrite what the template already says
                 value = found.fields.get(kind)
                 if value is None or _is_dash(value):
@@ -310,7 +310,7 @@ def fill_template_tables(shell_tables: Sequence, records: Sequence[SourceRecord]
                         if found.fields.get(other) and not _is_dash(found.fields[other]):
                             stats.unfilled_columns.append(f"{label}: the report gives a {other} score, the table wants {kind}")
                     continue
-                _set_cell_text(cells[col], value)
+                _setcell_text(cells[col], value)
                 stats.filled += 1
                 filled_here += 1
         if filled_here:
