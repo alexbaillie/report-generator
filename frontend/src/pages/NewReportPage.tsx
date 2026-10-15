@@ -4,8 +4,10 @@ import { Upload, Plus } from 'lucide-react';
 import { api } from '../services/api';
 import ScoreItemsPreview from '../components/ScoreItemsPreview';
 import {
+  PlacementMode,
   ScoreItem,
   buildTestResults,
+  isSuggested,
   countItems,
   describeCounts,
   entriesMissingATest,
@@ -120,6 +122,7 @@ interface TestTableEntry {
   files: File[];
   // Tables/graphs pulled out of an uploaded Word/PDF score report
   items: ScoreItem[];
+  mode: PlacementMode;
   extracting: boolean;
   extractNotes: string[];
   extractError: string;
@@ -133,6 +136,7 @@ function newTestEntry(): TestTableEntry {
     description: '',
     files: [],
     items: [],
+    mode: 'fill',
     extracting: false,
     extractNotes: [],
     extractError: '',
@@ -434,7 +438,7 @@ export default function NewReportPage() {
         updateTestEntry(index, (entry) => ({
           items: [
             ...entry.items,
-            ...result.items.map((item) => ({ ...item, id: `${file.name}:${item.id}`, selected: true })),
+            ...result.items.map((item) => ({ ...item, id: `${file.name}:${item.id}`, selected: isSuggested(item) })),
           ],
           extractNotes: [...entry.extractNotes, ...result.warnings.map((w) => `${file.name}: ${w}`)],
         }));
@@ -875,6 +879,8 @@ export default function NewReportPage() {
                         <ScoreItemsPreview
                           items={entry.items}
                           notes={entry.extractNotes}
+                          mode={entry.mode}
+                          onModeChange={(mode) => updateTestEntry(index, () => ({ mode }))}
                           onToggle={(id) => toggleScoreItem(index, id)}
                           onSetAll={(selected) => setAllScoreItems(index, selected)}
                         />

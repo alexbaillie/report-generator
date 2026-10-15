@@ -8,10 +8,21 @@ tables / graph placeholder for the uploaded ones, and leave the rest of the
 block (descriptions, notes) alone. A test the template has no block for gets a
 labelled block of its own instead, so nothing the user attached is ever dropped.
 
-Input is a list of ``{"test_name": str, "items": [...]}`` where each item is
-``{"kind": "table", "caption", "rows"}`` or
+Input is a list of ``{"test_name": str, "mode": "fill"|"insert", "items": [...]}``
+where each item is ``{"kind": "table", "caption", "rows", "merges"?, "widths"?}`` or
 ``{"kind": "image", "caption", "content_type", "data_b64"}`` (the shape produced
 by ``score_report_extractor``).
+
+Two ways to place a test's tables:
+
+* ``fill`` (the default): the template's own score tables stay exactly as they are
+  and only their blank score cells are filled in (``score_fill``); the template is
+  what the clinicians use, so its look is never changed. If nothing in the
+  template's tables could be matched, the uploaded tables are inserted instead.
+* ``insert``: the template's blank tables are replaced by the uploaded tables as
+  they appear in the score report.
+
+Graphs always replace the template's "(insert ... graph here)" placeholder.
 """
 from __future__ import annotations
 
@@ -26,6 +37,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt
+
+from services.score_fill import fill_template_tables, parse_source_tables, summarize
 
 P, TBL, SECT_PR = qn("w:p"), qn("w:tbl"), qn("w:sectPr")
 HEADING_MAX_CHARS = 100
@@ -60,7 +73,10 @@ def apply_test_results(
     docx_stream: BytesIO,
     test_results: Optional[Sequence[Mapping]],
     section_targets: Sequence[Tuple[str, Sequence[str]]] = (),
+    report: Optional[List[dict]] = None,
 ) -> BytesIO:
+    """``report``, if given, receives one dict per test saying what was done
+    (``result``: "filled" / "replaced" / "added", plus fill details)."""
     groups = _merge_groups(test_results or [])
     if not groups:
         docx_stream.seek(0)
@@ -70,9 +86,13 @@ def apply_test_results(
     body = document.element.body
     font = _body_font(body)
     boundary_headings = {_norm(alias) for _, aliases in section_targets for alias in aliases}
-    for name, items in groups:
-        if not _place_in_template_block(document, body, name, items, boundary_headings, font):
+    for name, items, mode in groups:
+        outcome = _place_in_template_block(document, body, name, items, boundary_headings, font, mode)
+        if not outcome:
             _append_block(document, body, name, items, font)
+            outcome = {"result": "added"}
+        if report is not None:
+            report.append({"test_name": name, **outcome})
 
     output = BytesIO()
     document.save(output)
@@ -152,18 +172,19 @@ def _set_font(run, font: Optional[str]) -> None:
         run.font.name = font
 
 
-def _merge_groups(test_results: Iterable[Mapping]) -> List[Tuple[str, List[Mapping]]]:
-    merged: Dict[str, Tuple[str, List[Mapping]]] = {}
+def _merge_groups(test_results: Iterable[Mapping]) -> List[Tuple[str, List[Mapping], str]]:
+    merged: Dict[str, Tuple[str, List[Mapping], str]] = {}
     for group in test_results:
         name = (group.get("test_name") or "").strip()
         items = list(group.get("items") or [])
         if not name or not items:
             continue
+        mode = "insert" if group.get("mode") == "insert" else "fill"
         key = _norm(name)
         if key in merged:
             merged[key][1].extend(items)
         else:
-            merged[key] = (name, items)
+            merged[key] = (name, items, mode)
     return list(merged.values())
 
 
@@ -171,8 +192,10 @@ def _merge_groups(test_results: Iterable[Mapping]) -> List[Tuple[str, List[Mappi
 # placing into the template's own block for the test
 # --------------------------------------------------------------------------- #
 def _place_in_template_block(
-    document, body, name: str, items: List[Mapping], boundary_headings, font: Optional[str] = None
-) -> bool:
+    document, body, name: str, items: List[Mapping], boundary_headings, font: Optional[str] = None,
+    mode: str = "fill",
+) -> Optional[dict]:
+    """Returns what was done ({"result": ...}) or None if the template has no block for the test."""
     children = list(body)
     family = _family(name)
     exact = _norm(name).replace(" ", "")
@@ -201,6 +224,11 @@ def _place_in_template_block(
         if not ((has_tables and shells) or (has_images and placeholders)):
             continue  # e.g. the "Tests Administered" list: no blank tables to replace
 
+        if mode == "fill" and has_tables and shells:
+            outcome = _fill_block(document, block, shells, placeholders, items, font)
+            if outcome:
+                return outcome
+
         remove: List = []
         if has_tables:
             remove += shells + _labels_for(shells, children, anchor)
@@ -216,8 +244,39 @@ def _place_in_template_block(
             element.getparent().remove(element)
         _insert_items(document, marker, items, heading=None, font=font)
         marker.getparent().remove(marker)
-        return True
-    return False
+        return {"result": "replaced"}
+    return None
+
+
+def _fill_block(document, block, shells, placeholders, items: List[Mapping], font: Optional[str]) -> Optional[dict]:
+    """Fill the template's own score tables from the uploaded tables, leaving their
+    look alone. Graphs (and uploaded tables that aren't score tables, so can't be
+    matched to template rows) go where the template says, or after its last table.
+    Returns None, having changed nothing, when no template cell could be filled."""
+    table_items = [i for i in items if i.get("kind") == "table"]
+    records = parse_source_tables(table_items)
+    if not records:
+        return None
+    stats = fill_template_tables(shells, records)
+    if not stats.filled:
+        return None
+
+    extras = [
+        i for i in items
+        if i.get("kind") != "table" or not parse_source_tables([i])
+    ]
+    if extras:
+        has_images = any(i.get("kind") == "image" for i in extras)
+        marker = OxmlElement("w:p")
+        if placeholders and has_images:
+            placeholders[0].addprevious(marker)
+            for placeholder in placeholders:
+                placeholder.getparent().remove(placeholder)
+        else:
+            shells[-1].addnext(marker)
+        _insert_items(document, marker, extras, heading=None, font=font)
+        marker.getparent().remove(marker)
+    return {"result": "filled", **summarize(stats)}
 
 
 def _block_end(children, anchor: int, family: str, boundary_headings) -> int:
@@ -318,7 +377,7 @@ def _insert_items(
             marker.addprevious(paragraph._p)
 
         if item.get("kind") == "table" and item.get("rows"):
-            marker.addprevious(_build_table(document, item["rows"], font))
+            marker.addprevious(_build_table(document, item["rows"], font, item.get("merges"), item.get("widths")))
             spacer = document.add_paragraph()  # Word merges adjacent tables without a paragraph between
             spacer.paragraph_format.space_after = Pt(4)
             marker.addprevious(spacer._p)
@@ -328,7 +387,27 @@ def _insert_items(
                 marker.addprevious(picture)
 
 
-def _build_table(document, rows: Sequence[Sequence[str]], font: Optional[str] = None):
+def _header_rows(rows: Sequence[Sequence[str]], merges) -> Tuple[set, Optional[int]]:
+    """(title rows, header row). Score reports often open with a one-cell title row
+    ("Index Scores") above the real column headings; shading that row as the header
+    is wrong, so title rows are only bolded and the shaded header is the first row
+    that has several cells filled."""
+    columns = max(len(r) for r in rows)
+    titles = set()
+    for r in range(min(len(rows), 3)):
+        filled = sum(1 for c in rows[r] if str(c).strip())
+        full_span = any(m[0] == r and m[1] == 0 and m[3] >= columns for m in merges)
+        if filled >= 2 and not full_span:
+            return titles, r
+        titles.add(r)
+    return set(), 0
+
+
+def _build_table(
+    document, rows: Sequence[Sequence[str]], font: Optional[str] = None,
+    merges: Optional[Sequence[Sequence[int]]] = None, widths: Optional[Sequence[int]] = None,
+):
+    merges = [m for m in (merges or []) if len(m) == 4]
     columns = max(len(row) for row in rows)
     table = document.add_table(rows=len(rows), cols=columns)
     properties = table._tbl.tblPr
@@ -357,8 +436,21 @@ def _build_table(document, rows: Sequence[Sequence[str]], font: Optional[str] = 
     width.set(qn("w:type"), "pct")
     width.set(qn("w:w"), "5000")
 
+    covered = set()
+    for r, c, rowspan, colspan in merges:
+        if r + rowspan > len(rows) or c + colspan > columns:
+            continue
+        table.cell(r, c).merge(table.cell(r + rowspan - 1, c + colspan - 1))
+        covered.update((r + dr, c + dc) for dr in range(rowspan) for dc in range(colspan) if dr or dc)
+
+    if widths and len(widths) == columns and all(w > 0 for w in widths):
+        _apply_widths(document, table, widths)
+
+    title_rows, header_row = _header_rows(rows, merges)
     for r, row in enumerate(rows):
         for c in range(columns):
+            if (r, c) in covered:
+                continue
             cell = table.cell(r, c)
             paragraph = cell.paragraphs[0]
             paragraph.paragraph_format.space_before = Pt(0)
@@ -370,16 +462,50 @@ def _build_table(document, rows: Sequence[Sequence[str]], font: Optional[str] = 
                 run.add_text(line)
             run.font.size = Pt(9)
             _set_font(run, font)
-            if r == 0:
+            if r in title_rows:
+                run.bold = True
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            elif r == header_row:
                 run.bold = True
                 shading = OxmlElement("w:shd")
                 shading.set(qn("w:val"), "clear")
                 shading.set(qn("w:color"), "auto")
                 shading.set(qn("w:fill"), HEADER_FILL)
                 cell._tc.get_or_add_tcPr().append(shading)
-    header_row = table.rows[0]._tr.get_or_add_trPr()
-    header_row.append(OxmlElement("w:tblHeader"))
+    if header_row is not None:
+        # repeat the column headings (and any title above them) if the table spans pages
+        for r in sorted(title_rows | {header_row}):
+            table.rows[r]._tr.get_or_add_trPr().append(OxmlElement("w:tblHeader"))
     return table._tbl
+
+
+def _apply_widths(document, table, widths: Sequence[int]) -> None:
+    """Keep the score report's relative column widths, scaled to the page's text width."""
+    try:
+        section = document.sections[-1]
+        total = int((section.page_width - section.left_margin - section.right_margin) / 635)  # EMU -> twips
+    except Exception:
+        total = 9360
+    scale = total / float(sum(widths))
+    twips = [max(1, int(w * scale)) for w in widths]
+
+    grid = table._tbl.find(qn("w:tblGrid"))
+    if grid is not None:
+        for column, w in zip(grid.findall(qn("w:gridCol")), twips):
+            column.set(qn("w:w"), str(w))
+    for tr in table._tbl.findall(qn("w:tr")):
+        col = 0
+        for tc in tr.findall(qn("w:tc")):
+            tc_pr = tc.get_or_add_tcPr()
+            grid_span = tc_pr.find(qn("w:gridSpan"))
+            span = int(grid_span.get(qn("w:val"))) if grid_span is not None else 1
+            tc_w = tc_pr.find(qn("w:tcW"))
+            if tc_w is None:
+                tc_w = OxmlElement("w:tcW")
+                tc_pr.insert(0, tc_w)
+            tc_w.set(qn("w:type"), "dxa")
+            tc_w.set(qn("w:w"), str(sum(twips[col:col + span])))
+            col += span
 
 
 def _build_picture(document, item: Mapping):

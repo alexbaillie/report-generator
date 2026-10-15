@@ -46,6 +46,8 @@ class TestResultItem(BaseModel):
     kind: Literal["table", "image"]
     caption: str = ""
     rows: Optional[List[List[str]]] = None
+    merges: Optional[List[List[int]]] = None   # [row, col, rowspan, colspan]
+    widths: Optional[List[int]] = None         # relative column widths
     content_type: Optional[str] = None
     data_b64: Optional[str] = None
     width: Optional[int] = None
@@ -54,6 +56,9 @@ class TestResultItem(BaseModel):
 class TestResultGroup(BaseModel):
     """Everything attached for one test (e.g. WISC-V): chosen items plus any pasted HTML tables."""
     test_name: str
+    # "fill": fill the Word template's own score tables (its look is untouched);
+    # "insert": replace them with the tables as they appear in the score report.
+    mode: Literal["fill", "insert"] = "fill"
     pasted_html: str = ""
     items: List[TestResultItem] = []
 
@@ -104,7 +109,7 @@ def _save_test_results(db: Session, report_id: int, groups: List[TestResultGroup
                     report_id=report_id,
                     test_name=name,
                     position=position,
-                    payload=json.dumps({"items": items}),
+                    payload=json.dumps({"items": items, "mode": group.mode}),
                 )
             )
 
@@ -193,6 +198,15 @@ async def list_test_results(report_id: int, db: Session = Depends(get_db)):
     return summaries
 
 
+def _stored_group(result: ReportTestResult) -> dict:
+    payload = json.loads(result.payload)
+    return {
+        "test_name": result.test_name,
+        "mode": payload.get("mode", "fill"),
+        "items": payload.get("items", []),
+    }
+
+
 @router.get("/{report_id}/export-docx")
 async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
     """Export a saved report into its configured Word template."""
@@ -200,6 +214,7 @@ async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
+    fill_report: List[dict] = []
     try:
         document = await run_in_threadpool(
             create_report_docx,
@@ -207,10 +222,8 @@ async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
             patient_name=report.patient_name,
             report_type=report.report_type,
             content=report.content,
-            test_results=[
-                {"test_name": r.test_name, "items": json.loads(r.payload).get("items", [])}
-                for r in report.test_results
-            ],
+            test_results=[_stored_group(r) for r in report.test_results],
+            fill_report=fill_report,
         )
     except DocxExportError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -219,7 +232,11 @@ async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
     return StreamingResponse(
         document,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            # What was filled into the template (and what wasn't), for the UI to show.
+            "X-Score-Fill": json.dumps(fill_report, separators=(",", ":")),
+        },
     )
 
 @router.delete("/{report_id}")

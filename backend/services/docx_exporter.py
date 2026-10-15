@@ -222,15 +222,17 @@ def create_report_docx(
     report_type: str,
     content: str,
     test_results: Optional[Sequence[Mapping]] = None,
+    fill_report: Optional[List[dict]] = None,
 ) -> BytesIO:
     """``test_results``: uploaded/pasted score tables and graphs per test, placed
-    under that test's section by ``apply_test_results``."""
+    under that test's section by ``apply_test_results``. ``fill_report``, if given,
+    receives a per-test account of what was done (see ``apply_test_results``)."""
     profile = _select_profile(title)
     if profile is None:
         generic = _create_generic_report_docx(
             title=title, patient_name=patient_name, report_type=report_type, content=content
         )
-        return apply_test_results(generic, test_results, ())
+        return apply_test_results(generic, test_results, (), fill_report)
     template_path, section_targets, fill_front_page = profile
     if not template_path.is_file():
         raise DocxExportError("The Word template for this report type is missing from the application.")
@@ -260,7 +262,7 @@ def create_report_docx(
     patched = _write_patched_package(
         patched_xml, template_path, _patched_header_footer_parts(template_path, clean_name)
     )
-    return apply_test_results(patched, test_results, section_targets)
+    return apply_test_results(patched, test_results, section_targets, fill_report)
 
 
 def _create_generic_report_docx(
