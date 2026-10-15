@@ -296,3 +296,47 @@ def test_extractor_reports_merges_widths_and_flags_cover_pictures(tmp_path: Path
     assert pictures[1].get("suggested", True) is True
     assert tables[0]["merges"] == [[0, 0, 1, 3]]
     assert len(tables[0]["widths"]) == 3
+
+
+# --------------------------------------------------------------------------- #
+# a fully generated report: the template's headings are gone, its tables remain
+# --------------------------------------------------------------------------- #
+GENERATED = (
+    METADATA
+    + "# Cognitive & Neuropsychological Results\nThe WISC-V results show average ability.\n"
+    + "# Academic Achievement\nReading is at grade level.\n"
+    + "# Adaptive, Behavioural & Social-Emotional Functioning\nAdaptive skills are typical.\n"
+)
+
+
+def export_generated(title, *groups, report=None):
+    stream = create_report_docx(
+        title=title, patient_name="Alex Test", report_type="x", content=GENERATED,
+        test_results=list(groups), fill_report=report,
+    )
+    return Document(io.BytesIO(stream.getvalue()))
+
+
+def test_only_the_named_versions_tables_are_filled_when_the_templates_headings_are_gone():
+    from services.docx_test_results import _norm, _text
+    baseline = export_generated(PSYCHED)
+    # sanity: the headings really are gone in this scenario
+    assert not any(_norm(_text(el)) == "wisc5" for el in baseline.element.body)
+
+    report = []
+    doc = export_generated(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
+    assert report[0]["result"] == "filled" and report[0]["filled"] >= 12
+
+    vci_rows = [[c.text.strip() for c in r.cells] for t in doc.tables for r in t.rows
+                if r.cells[0].text.strip().startswith("Verbal Comprehension (VCI)")]
+    assert sum(1 for r in vci_rows if r[1] == "101") == 1            # WISC-V only
+    assert sum(1 for r in vci_rows if not any(r[1:])) == len(vci_rows) - 1   # WISC-IV / WAIS-IV stay blank
+    assert table_count(doc) == table_count(baseline)
+
+
+def test_a_request_for_another_version_never_writes_into_tables_headed_with_a_different_version():
+    doc = export_generated(PSYCHED, {"test_name": "WISC-IV", "items": [pearson_index_table()]})
+    for table in doc.tables:
+        header = table.rows[0].cells[0].text.replace(chr(10), " ")
+        if header.startswith(("WISC-V", "WAIS-IV")):
+            assert not any(c.text.strip() == "101" for row in table.rows for c in row.cells), header

@@ -38,7 +38,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt
 
-from services.score_fill import fill_template_tables, parse_source_tables, summarize
+from services.score_fill import cell_text, fill_template_tables, header_field, parse_source_tables, summarize
 
 P, TBL, SECT_PR = qn("w:p"), qn("w:tbl"), qn("w:sectPr")
 HEADING_MAX_CHARS = 100
@@ -202,6 +202,11 @@ def _place_in_template_block(
     has_tables = any(i.get("kind") == "table" for i in items)
     has_images = any(i.get("kind") == "image" for i in items)
 
+    if mode == "fill" and has_tables:
+        outcome = _fill_tagged_tables(document, body, name, items, font)
+        if outcome:
+            return outcome
+
     candidates: Dict[str, List[int]] = {"eh": [], "fh": [], "ea": [], "fa": []}
     for index, element in enumerate(children):
         if element.tag != P:
@@ -216,6 +221,7 @@ def _place_in_template_block(
         head = len(raw) <= HEADING_MAX_CHARS
         candidates[("e" if is_exact else "f") + ("h" if head else "a")].append(index)
 
+    heading_anchors = set(candidates["eh"] + candidates["fh"])  # real headings, not a sentence that mentions the test
     for anchor in candidates["eh"] + candidates["fh"] + candidates["ea"] + candidates["fa"]:
         end = _block_end(children, anchor, family, boundary_headings)
         block = children[anchor:end]
@@ -224,8 +230,12 @@ def _place_in_template_block(
         if not ((has_tables and shells) or (has_images and placeholders)):
             continue  # e.g. the "Tests Administered" list: no blank tables to replace
 
-        if mode == "fill" and has_tables and shells:
-            outcome = _fill_block(document, block, shells, placeholders, items, font)
+        if mode == "fill" and has_tables and shells and anchor in heading_anchors:
+            # never write into a table that is headed as a different test version
+            token = _norm(name).replace(" ", "")
+            other_versions = {id(t) for t, tag in _table_groups(body) if tag not in (None, token)}
+            usable = [t for t in shells if id(t) not in other_versions]
+            outcome = _fill_block(document, block, usable, placeholders, items, font) if usable else None
             if outcome:
                 return outcome
 
@@ -253,6 +263,10 @@ def _fill_block(document, block, shells, placeholders, items: List[Mapping], fon
     look alone. Graphs (and uploaded tables that aren't score tables, so can't be
     matched to template rows) go where the template says, or after its last table.
     Returns None, having changed nothing, when no template cell could be filled."""
+    return _fill_and_place(document, shells, placeholders, items, font)
+
+
+def _fill_and_place(document, shells, placeholders, items: List[Mapping], font: Optional[str]) -> Optional[dict]:
     table_items = [i for i in items if i.get("kind") == "table"]
     records = parse_source_tables(table_items)
     if not records:
@@ -277,6 +291,69 @@ def _fill_block(document, block, shells, placeholders, items: List[Mapping], fon
         _insert_items(document, marker, extras, heading=None, font=font)
         marker.getparent().remove(marker)
     return {"result": "filled", **summarize(stats)}
+
+
+_TOKEN = re.compile(r"(?<![a-z0-9])([a-z]{2,8})(\d+)(?![a-z0-9])")
+
+
+def _test_token(text: str) -> Optional[str]:
+    """The test-and-version a piece of text names ("WISC-V Index" -> "wisc5"), if it
+    names a known one."""
+    for match in _TOKEN.finditer(_norm(text)):
+        if match.group(1) in KNOWN_FAMILIES:
+            return match.group(1) + match.group(2)
+    return None
+
+
+def _table_groups(body) -> List[Tuple[object, Optional[str]]]:
+    """Every score table in the body with the test version it belongs to (or None).
+    A table headed "WISC-V Index" starts that version's group; the tables after it
+    ("VCI Subtests" ...) belong to it until another version's table, or a new "Index"
+    table that names no version, starts the next group. Needs no heading text, which
+    a generated report may have replaced."""
+    groups: List[Tuple[object, Optional[str]]] = []
+    current: Optional[str] = None
+    width = 0
+    for table in body.iterchildren(TBL):
+        rows = table.findall(qn("w:tr"))
+        first = rows[0].findall(qn("w:tc")) if rows else []
+        header = cell_text(first[0]) if first else ""
+        if not any(header_field(cell_text(tc)) for tc in first):
+            # No column headings: a supplementary-subtests table continues the group
+            # above when it has the same columns; anything else ends the group.
+            if current is not None and len(first) == width:
+                groups.append((table, current))
+            else:
+                current = None
+                groups.append((table, None))
+            continue
+        width = len(first)
+        tagged = _test_token(header)
+        if tagged:
+            current = tagged
+        elif _norm(header) in ("index", "indexes", "indices") or not header:
+            current = None  # a new group that names no version
+        groups.append((table, current))
+    return groups
+
+
+def _owned_tables(body, token: str) -> List:
+    return [table for table, tag in _table_groups(body) if tag == token]
+
+
+def _fill_tagged_tables(document, body, name: str, items: List[Mapping], font: Optional[str]) -> Optional[dict]:
+    token = _norm(name).replace(" ", "")
+    if not re.fullmatch(r"[a-z]+\d+", token):
+        return None
+    shells = _owned_tables(body, token)
+    if not shells:
+        return None
+    family = _family(name)
+    placeholders = [
+        el for el in body.iterchildren(P)
+        if _PLACEHOLDER.match(_text(el) or "x") and _has_family(_norm(_text(el)), family)
+    ]
+    return _fill_and_place(document, shells, placeholders, items, font)
 
 
 def _block_end(children, anchor: int, family: str, boundary_headings) -> int:
