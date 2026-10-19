@@ -50,9 +50,37 @@
           "type": "text"
         },
         {
-          "label": "Sunny Hill team",
-          "type": "textarea",
-          "placeholder": "Developmental Pediatrician, Psychologist, Assessing Clinician, SLP, OT, PT, Social worker, Case manager"
+          "label": "Developmental Pediatrician",
+          "type": "text"
+        },
+        {
+          "label": "Psychologist",
+          "type": "text",
+          "placeholder": "Name only; \"Ph.D., R.Psych.\" is added automatically"
+        },
+        {
+          "label": "Assessing Clinician",
+          "type": "text"
+        },
+        {
+          "label": "Speech Language Pathologist",
+          "type": "text"
+        },
+        {
+          "label": "Occupational Therapist",
+          "type": "text"
+        },
+        {
+          "label": "Physiotherapist",
+          "type": "text"
+        },
+        {
+          "label": "Social worker",
+          "type": "text"
+        },
+        {
+          "label": "Case manager",
+          "type": "text"
         }
       ]
     },

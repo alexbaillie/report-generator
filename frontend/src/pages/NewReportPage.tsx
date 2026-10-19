@@ -742,6 +742,7 @@ export default function NewReportPage() {
                             <option>Aseba</option>
                             <option>ASRS 1.1</option>
                             <option>Beck Youth Inventory</option>
+                            <option>BASC-3</option>
                             <option>Bayley-4</option>
                             <option>Beck Youth Inventory-2</option>
                             <option>Beery VMI-6</option>
