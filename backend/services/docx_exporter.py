@@ -127,6 +127,9 @@ CDBC_FRONT_LABELS: Mapping[str, Sequence[str]] = {
 }
 
 
+CDBC_DATE_LABELS = frozenset({"date of birth", "date of assessment", "date of report", "date of conference"})
+
+
 def supports_asd_template(title: str) -> bool:
     normalized = _normalize(title)
     return "asd" in normalized or "autism" in normalized
@@ -245,7 +248,7 @@ def create_report_docx(
     metadata = _extract_labeled_values(sections.get("report metadata (front page)", ""))
 
     fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
-    _fill_generated_sections(root, sections, section_targets)
+    _fill_generated_sections(root, sections, section_targets, _bullet_prototype(root, template_path))
 
     # Make the leftover template boilerplate readable: use the real name instead
     # of the "Jane/Joe Lastname" placeholders, and drop instructional highlighting.
@@ -470,7 +473,8 @@ def _fill_front_page_cdbc(
                     _set_element_text(paragraph, swapped)
                 break
 
-    # Labelled front-page paragraphs ("DATE OF BIRTH:") get their value appended.
+    # Labelled front-page paragraphs ("DATE OF BIRTH:") get their value after a tab,
+    # keeping the template's own tab-aligned layout.
     for paragraph in paragraphs:
         text = _element_text(paragraph).strip()
         if ":" not in text:
@@ -482,11 +486,97 @@ def _fill_front_page_cdbc(
         value = _first_value(metadata, aliases)
         if not value:
             continue
-        label_text = text.split(":", 1)[0].strip()
-        _set_element_text(paragraph, f"{label_text}: {value}")
+        if source_label in CDBC_DATE_LABELS:
+            value = _readable_dates(value)
+        _set_labelled_value(paragraph, text.split(":", 1)[0].strip(), value)
+
+    _fill_team(paragraphs, metadata)
 
 
-def _fill_generated_sections(root, sections: Mapping[str, str], section_targets) -> None:
+def _leading_tabs(paragraph) -> int:
+    count = 0
+    for run in paragraph.findall(f"{{{W_NS}}}r"):
+        for child in run:
+            if child.tag == f"{{{W_NS}}}tab":
+                count += 1
+            elif child.tag == f"{{{W_NS}}}t" and (child.text or "").strip():
+                return count
+    return count
+
+
+def _set_labelled_value(paragraph, label: str, value: str) -> None:
+    """"<tabs>LABEL:<tab>value", with the paragraph's own leading tabs and formatting."""
+    _set_element_text(paragraph, "\t" * _leading_tabs(paragraph) + f"{label}:\t{value}")
+
+
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August",
+           "September", "October", "November", "December")
+
+
+def _readable_dates(value: str) -> str:
+    """"2015-03-08" -> "March 8, 2015"; several dates read as a list. Anything that
+    isn't made only of ISO dates is left as the person typed it."""
+    parts = [part for part in re.split(r"\s*[;,]\s*", value.strip()) if part]
+    matches = [re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", part) for part in parts]
+    if not parts or not all(matches) or any(not 1 <= int(m.group(2)) <= 12 for m in matches):
+        return value
+    words = [f"{_MONTHS[int(m.group(2)) - 1]} {int(m.group(3))}, {m.group(1)}" for m in matches]
+    if len(words) <= 2:
+        return " and ".join(words)
+    return "; ".join(words[:-1]) + " and " + words[-1]
+
+
+# Sunny Hill team lines on the front page: template label -> metadata labels that fill it.
+CDBC_TEAM_ROLES: Mapping[str, Sequence[str]] = {
+    "developmental pediatrician": ("developmental pediatrician", "developmental paediatrician"),
+    "psychologist": ("psychologist",),
+    "assessing clinician": ("assessing clinician",),
+    "speech language pathologist": ("speech language pathologist", "slp"),
+    "occupational therapist": ("occupational therapist", "ot"),
+    "physiotherapist": ("physiotherapist", "physical therapist", "pt"),
+    "social worker": ("social worker",),
+    "case manager": ("case manager",),
+}
+PSYCHOLOGIST_CREDENTIALS = ", Ph.D., R.Psych."
+
+
+def _team_values(metadata: Mapping[str, str]) -> Dict[str, str]:
+    """Team members by role. One field per role, or (older reports) a single "Sunny
+    Hill team" box with "Role: Name" lines."""
+    values: Dict[str, str] = {}
+    free_text = metadata.get("sunny hill team", "")
+    if free_text:
+        for role, name in _extract_labeled_values(free_text.replace(" - ", ": ").replace(",", "\n")).items():
+            values[role] = name
+    for role, aliases in CDBC_TEAM_ROLES.items():
+        value = _first_value(metadata, aliases) or _first_value(values, aliases)
+        if value:
+            values[role] = value
+    return {role: values[role] for role in CDBC_TEAM_ROLES if role in values}
+
+
+def _fill_team(paragraphs, metadata: Mapping[str, str]) -> None:
+    team = _team_values(metadata)
+    if not team:
+        return
+    in_team = False
+    for paragraph in paragraphs:
+        text = _element_text(paragraph).strip()
+        if not in_team:
+            in_team = _normalize(text) == "sunny hill team"
+            continue
+        if ":" not in text or text.startswith("*"):
+            break  # past the team list
+        label = text.split(":", 1)[0].strip()
+        value = team.get(_normalize(label.rstrip("*")))
+        if not value:
+            continue
+        if _normalize(label) == "psychologist" and not re.search(r"(?i)ph\.?\s?d|psy\.?\s?d|r\.?\s?psych", value):
+            value += PSYCHOLOGIST_CREDENTIALS
+        _set_labelled_value(paragraph, label, value)
+
+
+def _fill_generated_sections(root, sections: Mapping[str, str], section_targets, bullet: Optional[dict] = None) -> None:
     body = root.find(f"{{{W_NS}}}body")
     if body is None:
         raise DocxExportError("The Word template has no document body.")
@@ -527,8 +617,8 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets)
                 body.remove(element)
 
         anchor = heading
-        for block in _content_blocks(generated):
-            new_paragraph = _paragraph_element(style_source, block)
+        for kind, block in _structured_blocks(generated):
+            new_paragraph = _paragraph_element(style_source, block, kind, bullet)
             anchor.addnext(new_paragraph)
             anchor = new_paragraph
 
@@ -614,10 +704,14 @@ def _set_element_text(element, text: str) -> None:
     run = etree.Element(f"{{{W_NS}}}r")
     if run_properties is not None:
         run.append(deepcopy(run_properties))
-    text_element = etree.SubElement(run, f"{{{W_NS}}}t")
-    if text.startswith(" ") or text.endswith(" "):
-        text_element.set(f"{{{XML_NS}}}space", "preserve")
-    text_element.text = text
+    for index, part in enumerate(text.split("\t")):
+        if index:
+            etree.SubElement(run, f"{{{W_NS}}}tab")  # a tab character inside w:t is not a Word tab
+        if part:
+            text_element = etree.SubElement(run, f"{{{W_NS}}}t")
+            if part.startswith(" ") or part.endswith(" "):
+                text_element.set(f"{{{XML_NS}}}space", "preserve")
+            text_element.text = part
     element.append(run)
 
 
@@ -633,16 +727,61 @@ def _set_cell_text(cell, text: str) -> None:
     _set_element_text(paragraph, text)
 
 
-def _paragraph_element(style_source, text: str):
-    paragraph = etree.Element(f"{{{W_NS}}}p")
-    paragraph_properties = style_source.find(f"{{{W_NS}}}pPr")
-    if paragraph_properties is not None:
-        paragraph.append(deepcopy(paragraph_properties))
+def _w(tag: str) -> str:
+    return f"{{{W_NS}}}{tag}"
+
+
+_PLAIN_DROP = ("i", "iCs", "ins", "del", "rPrChange")
+
+
+def _plain_run_properties(properties, *, drop=_PLAIN_DROP):
+    """A copy of run properties without italics or tracked-change marks: text we generate
+    is never italic, whatever the template's placeholder paragraph looked like."""
+    if properties is None:
+        return None
+    clean = deepcopy(properties)
+    for tag in drop:
+        for node in clean.findall(_w(tag)):
+            clean.remove(node)
+    return clean
+
+
+def _plain_paragraph_properties(properties):
+    clean = deepcopy(properties)
+    for mark in clean.findall(_w("rPr")):
+        clean.replace(mark, _plain_run_properties(mark))
+    return clean
+
+
+def _paragraph_element(style_source, text: str, kind: str = "para", bullet: Optional[dict] = None):
+    """``kind``: "para", "heading" (a short bold line above bullets) or "bullet"
+    (a real Word list item copied from the template's own bullets)."""
+    paragraph = etree.Element(_w("p"))
+    if kind == "bullet" and bullet is not None:
+        paragraph.append(deepcopy(bullet["ppr"]))
+        run_properties = _plain_run_properties(bullet["rpr"], drop=_PLAIN_DROP + ("b", "bCs"))
+    else:
+        paragraph_properties = style_source.find(_w("pPr"))
+        if paragraph_properties is not None:
+            paragraph.append(_plain_paragraph_properties(paragraph_properties))
+        run_properties = _plain_run_properties(style_source.find(f".//{_w('rPr')}"))
+        if kind == "bullet":
+            text = "\u2022 " + text  # the template has no bullet list to copy
+        elif kind == "heading":
+            if run_properties is None:
+                run_properties = etree.Element(_w("rPr"))
+            if run_properties.find(_w("b")) is None:
+                run_properties.append(etree.Element(_w("b")))
+            ppr = paragraph.find(_w("pPr"))
+            if ppr is None:
+                ppr = etree.Element(_w("pPr"))
+                paragraph.insert(0, ppr)
+            if ppr.find(_w("keepNext")) is None:
+                ppr.insert(1 if ppr.find(_w("pStyle")) is not None else 0, etree.Element(_w("keepNext")))
 
     run = etree.SubElement(paragraph, f"{{{W_NS}}}r")
-    run_properties = style_source.find(f".//{{{W_NS}}}rPr")
     if run_properties is not None:
-        run.append(deepcopy(run_properties))
+        run.append(run_properties)
     text_element = etree.SubElement(run, f"{{{W_NS}}}t")
     if text.startswith(" ") or text.endswith(" "):
         text_element.set(f"{{{XML_NS}}}space", "preserve")
@@ -660,6 +799,123 @@ def _content_blocks(text: str) -> List[str]:
         for block in re.split(r"\n\s*\n|\n", cleaned)
     ]
     return [block for block in blocks if block]
+
+
+_BULLET_LINE = re.compile(r"^\s*[-*\u2022\u2013]\s+(.*\S)\s*$")
+
+
+def _structured_blocks(text: str) -> List[Tuple[str, str]]:
+    """Generated text as (kind, text) blocks: "bullet" for "- item" lines, "heading"
+    for a short line that introduces bullets (or a markdown heading), else "para"."""
+    cleaned = unescape(text or "")
+    cleaned = re.sub(r"(?i)<br\s*/?>", "\n", cleaned)
+    cleaned = re.sub(r"(?i)<li[^>]*>", "\n- ", cleaned)
+    cleaned = re.sub(r"(?i)</(?:p|div|tr|li|ul|ol)>", "\n", cleaned)
+    cleaned = re.sub(r"<[^>]+>", "", cleaned)
+
+    blocks: List[Tuple[str, str]] = []
+    for line in cleaned.split("\n"):
+        if not line.strip():
+            continue
+        line = re.sub(r"\*\*(.+?)\*\*", r"\1", line)
+        bullet = _BULLET_LINE.match(line)
+        heading = re.match(r"^\s*#{1,6}\s+(.*\S)\s*$", line)
+        if bullet and bullet.group(1).rstrip().endswith(":") and len(bullet.group(1)) <= 80:
+            # "- Attention:" is how a model writes a heading above its sub-bullets
+            blocks.append(("heading", bullet.group(1).strip().rstrip(":").strip()))
+        elif bullet:
+            blocks.append(("bullet", re.sub(r"\s+", " ", bullet.group(1)).strip()))
+        elif heading:
+            blocks.append(("heading", heading.group(1).strip().rstrip(":")))
+        else:
+            blocks.append(("para", re.sub(r"\s+", " ", line).strip()))
+
+    for index, (kind, text_value) in enumerate(blocks[:-1]):
+        if (
+            kind == "para"
+            and blocks[index + 1][0] == "bullet"
+            and len(text_value) <= 60
+            and not re.search(r"[.!?;,]$", text_value)
+        ):
+            blocks[index] = ("heading", text_value.rstrip(":"))
+    return blocks
+
+
+def _set_spacing_after(properties, after: str = "0") -> None:
+    spacing = properties.find(_w("spacing"))
+    if spacing is None:
+        spacing = etree.Element(_w("spacing"))
+        later = next(
+            (properties.find(_w(tag)) for tag in ("ind", "contextualSpacing", "jc", "textAlignment", "outlineLvl", "rPr")
+             if properties.find(_w(tag)) is not None),
+            None,
+        )
+        if later is not None:
+            later.addprevious(spacing)
+        else:
+            properties.append(spacing)
+    spacing.set(_w("after"), after)
+    spacing.set(_w("before"), "0")
+
+
+def _bullet_prototype(root, template_path: Path) -> Optional[dict]:
+    """The template's own bullet-list look: the paragraph properties of one of its
+    bullet items (so generated bullets match the clinic's list style and indents).
+    None if the template has no bullet list at all."""
+    try:
+        with ZipFile(template_path, "r") as package:
+            numbering = etree.fromstring(package.read("word/numbering.xml"))
+    except (KeyError, etree.XMLSyntaxError):
+        return None
+    abstract = {a.get(_w("abstractNumId")): a for a in numbering.findall(_w("abstractNum"))}
+    bullet_ids = set()
+    for num in numbering.findall(_w("num")):
+        link = num.find(_w("abstractNumId"))
+        definition = abstract.get(link.get(_w("val"))) if link is not None else None
+        level = definition.find(_w("lvl")) if definition is not None else None
+        fmt = level.find(_w("numFmt")) if level is not None else None
+        if fmt is not None and fmt.get(_w("val")) == "bullet":
+            bullet_ids.add(num.get(_w("numId")))
+    if not bullet_ids:
+        return None
+
+    exemplars = []
+    for paragraph in root.iter(_w("p")):
+        ppr = paragraph.find(_w("pPr"))
+        num_pr = ppr.find(_w("numPr")) if ppr is not None else None
+        if num_pr is None or not _element_text(paragraph).strip():
+            continue
+        num_id, level = num_pr.find(_w("numId")), num_pr.find(_w("ilvl"))
+        if num_id is None or num_id.get(_w("val")) not in bullet_ids:
+            continue
+        if level is not None and level.get(_w("val")) != "0":
+            continue
+        exemplars.append(paragraph)
+    if exemplars:
+        def is_bold(paragraph) -> bool:
+            run = paragraph.find(_w("r"))
+            properties = run.find(_w("rPr")) if run is not None else None
+            return properties is not None and properties.find(_w("b")) is not None
+
+        paragraph = next((p for p in exemplars if not is_bold(p)), exemplars[0])
+        proto = deepcopy(paragraph.find(_w("pPr")))
+        for mark in proto.findall(_w("rPr")):
+            proto.remove(mark)
+        _set_spacing_after(proto)
+        run = paragraph.find(_w("r"))
+        return {"ppr": proto, "rpr": run.find(_w("rPr")) if run is not None else None}
+
+    # No bullet item in the body to copy: build a standard one on a bullet list the template defines.
+    num_id = sorted(bullet_ids, key=lambda value: int(value) if value.isdigit() else 0)[0]
+    ppr = etree.Element(_w("pPr"))
+    num_pr = etree.SubElement(ppr, _w("numPr"))
+    etree.SubElement(num_pr, _w("ilvl")).set(_w("val"), "0")
+    etree.SubElement(num_pr, _w("numId")).set(_w("val"), num_id)
+    _set_spacing_after(ppr)
+    indent = etree.SubElement(ppr, _w("ind"))
+    indent.set(_w("left"), "720")
+    indent.set(_w("hanging"), "360")
+    return {"ppr": ppr, "rpr": None}
 
 
 def _normalize(value: str) -> str:
