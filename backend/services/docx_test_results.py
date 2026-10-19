@@ -243,11 +243,30 @@ def _place_in_template_block(
         is_exact = exact in norm.replace(" ", "")
         if not (is_exact or _has_family(norm, family)):
             continue
+        if _PLACEHOLDER.match(raw):
+            continue  # "(insert WISC-V graph here)" is part of a block, not its heading
         head = len(raw) <= HEADING_MAX_CHARS
         candidates[("e" if is_exact else "f") + ("h" if head else "a")].append(index)
 
     heading_anchors = set(candidates["eh"] + candidates["fh"])  # real headings, not a sentence that mentions the test
-    for anchor in candidates["eh"] + candidates["fh"] + candidates["ea"] + candidates["fa"]:
+
+    def gap(anchor: int) -> int:
+        """How far the first blank table / graph placeholder is below this heading. The heading
+        right above a test's tables is its block; an entry in the "Tests Administered" list that
+        happens to run into them (when the list around it was trimmed) is much further up."""
+        block = children[anchor:_block_end(children, anchor, family, boundary_headings)]
+        found = [
+            n for n, el in enumerate(block)
+            if (has_tables and el.tag == TBL) or (not has_tables and el.tag == P and _PLACEHOLDER.match(_text(el) or "x"))
+        ]
+        return found[0] if found else 10**9
+
+    ordered_anchors = [
+        anchor
+        for group in ("eh", "fh", "ea", "fa")
+        for anchor in sorted(candidates[group], key=gap)
+    ]
+    for anchor in ordered_anchors:
         end = _block_end(children, anchor, family, boundary_headings)
         block = children[anchor:end]
         shells = [el for el in block if el.tag == TBL]

@@ -68,6 +68,11 @@ def graph():
             "data_b64": base64.b64encode(bar_chart_png()).decode(), "width": 800, "height": 400}
 
 
+def given(test):
+    """A test that was administered but has no results attached: its template block stays untouched."""
+    return {"test_name": test, "items": []}
+
+
 def export(title, *groups, report=None):
     stream = create_report_docx(
         title=title, patient_name="Alex Test", report_type="x", content=METADATA,
@@ -125,7 +130,7 @@ def test_source_records_skip_title_rows_and_flag_unadministered():
 # filling the template
 # --------------------------------------------------------------------------- #
 def test_fill_keeps_the_templates_tables_and_fills_only_the_blank_score_cells():
-    baseline = export(PSYCHED)
+    baseline = export(PSYCHED, given("WISC-V"))
     report = []
     doc = export(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
 
@@ -189,7 +194,7 @@ def test_a_column_is_only_filled_from_the_same_kind_of_score():
 
 
 def test_graph_replaces_the_placeholder_while_tables_are_filled():
-    baseline = export(PSYCHED)
+    baseline = export(PSYCHED, given("WISC-V"))
     doc = export(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), graph()]})
     assert len(doc.inline_shapes) == len(baseline.inline_shapes) + 1
     assert table_count(doc) == table_count(baseline)
@@ -319,13 +324,15 @@ def export_generated(title, *groups, report=None):
 
 def test_only_the_named_versions_tables_are_filled_when_the_templates_headings_are_gone():
     from services.docx_test_results import _norm, _text
-    baseline = export_generated(PSYCHED)
+    baseline = export_generated(PSYCHED, given("WISC-V"), given("WAIS-IV"))
     # the template's test headings and table captions survive a generated section...
     assert any(_norm(_text(el)) == "wisc5" for el in baseline.element.body)
     assert any(_text(el) == "WISC-V Index Scores Summary" for el in baseline.element.body)
 
     report = []
-    doc = export_generated(PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, report=report)
+    doc = export_generated(
+        PSYCHED, {"test_name": "WISC-V", "items": [pearson_index_table(), pearson_subtest_table()]}, given("WAIS-IV"),
+        report=report)
     assert report[0]["result"] == "filled" and report[0]["filled"] >= 12
 
     vci_rows = [[c.text.strip() for c in r.cells] for t in doc.tables for r in t.rows
