@@ -625,6 +625,10 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
 
     located.sort(key=lambda item: item[0])
     signature = _signature_start(body)
+    appendix_headings = [
+        paragraph for paragraph in paragraphs
+        if len(_element_text(paragraph)) <= 100 and re.match(r"(?i)\s*appendix\s*\d", _element_text(paragraph))
+    ]
     for position, (_, section_name, heading) in enumerate(located):
         generated = sections.get(section_name)
         if not generated:
@@ -637,10 +641,11 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
         else:
             end_index = len(current_children)
 
-        if signature is not None and signature in current_children:
-            signature_index = current_children.index(signature)
-            if start_index < signature_index < end_index:
-                end_index = signature_index  # the signatures and appendices after it are not part of the section
+        for limit in (signature, *appendix_headings):
+            if limit is not None and limit in current_children:
+                limit_index = current_children.index(limit)
+                if start_index < limit_index < end_index:
+                    end_index = limit_index  # the signatures and each appendix are not part of the section before them
         interval = current_children[start_index + 1 : end_index]
         style_source = next(
             (
