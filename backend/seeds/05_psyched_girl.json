@@ -512,6 +512,116 @@
           "type": "textarea"
         }
       ]
+    },
+    {
+      "title": "Appendix 1: Report Card Review",
+      "fields": [
+        {
+          "label": "Year 1: Grade, school (program if relevant, e.g. immersion, IB)",
+          "type": "text",
+          "placeholder": "Leave the whole year empty if there is nothing to add"
+        },
+        {
+          "label": "Year 1: IEP (designation) major goals",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 1: Learning support programming",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 1: Comments from report card(s), all terms together",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 1: Comments from report card: Term 1",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 1: Comments from report card: Term 2",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 1: Comments from report card: Term 3/Final report",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Grade, school (program if relevant, e.g. immersion, IB)",
+          "type": "text",
+          "placeholder": "Leave the whole year empty if there is nothing to add"
+        },
+        {
+          "label": "Year 2: IEP (designation) major goals",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Learning support programming",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Comments from report card(s), all terms together",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Comments from report card: Term 1",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Comments from report card: Term 2",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 2: Comments from report card: Term 3/Final report",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Grade, school (program if relevant, e.g. immersion, IB)",
+          "type": "text",
+          "placeholder": "Leave the whole year empty if there is nothing to add"
+        },
+        {
+          "label": "Year 3: IEP (designation) major goals",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Learning support programming",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Comments from report card(s), all terms together",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Comments from report card: Term 1",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Comments from report card: Term 2",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        },
+        {
+          "label": "Year 3: Comments from report card: Term 3/Final report",
+          "type": "textarea",
+          "placeholder": "Paste from the file review, one point per line (indent a line for a secondary bullet). Leave empty to leave it out."
+        }
+      ]
     }
   ]
 }

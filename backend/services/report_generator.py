@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict
 from database.models import Template, Document
 from services.ollama_client import generate_text
+from services.report_card_review import compose_report_card_review, is_report_card_section
 
 async def generate_report(
     db: Session,
@@ -65,6 +66,10 @@ async def generate_report_section(
     # Get documents
     documents = db.query(Document).filter(Document.id.in_(document_ids)).all()
     
+    if is_report_card_section(section_name):
+        # Report-card comments are reproduced exactly as typed, laid out in the template's format.
+        return compose_report_card_review(section_inputs)
+
     if wants_bullets(template, section_name) and (section_name or '').strip().lower().startswith('presenting concerns'):
         by_area = await generate_by_area(template, section_name, documents, section_inputs)
         if by_area:
