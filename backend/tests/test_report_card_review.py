@@ -186,3 +186,22 @@ def test_the_generate_section_endpoint_returns_the_appendix_without_calling_the_
         app.dependency_overrides.pop(get_db, None)
     assert response.status_code == 200
     assert response.json()["section_content"] == "**Grade 5**\n**Comments from Report Card(s)**\n- Doing well."
+
+
+def test_generating_any_section_never_deletes_an_appendix_in_any_branded_template():
+    """Every section of every branded template generated at once: the appendices are all still there."""
+    from services.docx_exporter import ASD_SECTION_TARGETS, CDBC_SECTION_TARGETS, PSYCHED_SECTION_TARGETS
+
+    cases = (
+        ("ASD Clinical Diagnostic Assessment Report", ASD_SECTION_TARGETS, ["APPENDIX 2: Additional Resources", "APPENDIX 3:"]),
+        (CDBC, CDBC_SECTION_TARGETS, ["Appendix 2: More information about ADHD", "Appendix 2: Apps to Support Academic Areas"]),
+        (PSYCHED, PSYCHED_SECTION_TARGETS, ["Appendix 2: Compass Clinic Homework Checklists", "Appendix 3: Daily Report Card"]),
+    )
+    for title, targets, appendices in cases:
+        content = METADATA + "".join(
+            f"# {name}\nGenerated text for {name}.\n" for name, _ in targets if not name.startswith("appendix 2")
+        )
+        items = paragraphs(export(title, content))
+        for heading in appendices:
+            assert any(t.startswith(heading) for t in items), f"{title}: lost {heading!r}"
+        assert any(t.startswith("Generated text for") for t in items), title
