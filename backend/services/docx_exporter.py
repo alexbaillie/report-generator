@@ -86,6 +86,8 @@ CDBC_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
     ("behavioural observations", ("BEHAVIOURAL OBSERVATIONS",)),
     ("tests administered", ("TESTS ADMINISTERED",)),
     ("cognitive, memory & academic results", ("General Cognitive Abilities",)),
+    ("appendix 1: report card review", ("Appendix 1: Report Card Review",)),
+    ("appendix 2", ("Appendix 2: More information about ADHD",)),  # only ends the section above
 )
 
 
@@ -114,6 +116,8 @@ PSYCHED_SECTION_TARGETS: Sequence[Tuple[str, Sequence[str]]] = (
     ("diagnoses (dsm-5-tr)", ("Descriptors/Diagnoses (DSM-5-TR)",)),
     ("highlighted recommendations", ("Highlighted Recommendations",)),
     ("recommendations", ("Recommendations",)),
+    ("appendix 1: report card review", ("Appendix 1: Report Card Review",)),
+    ("appendix 2", ("Appendix 2: Compass Clinic Homework Checklists",)),  # only ends the section above
 )
 
 
@@ -252,6 +256,7 @@ def create_report_docx(
     fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
     pruned_entry = _prune_unadministered_tests(root, section_targets, sections, tests_administered, test_results)
     _fill_generated_sections(root, sections, section_targets, _bullet_prototype(root, template_path))
+    _remove_unused_report_card_appendix(root, section_targets, sections)
 
     # Make the leftover template boilerplate readable: use the real name instead
     # of the "Jane/Joe Lastname" placeholders, and drop instructional highlighting.
@@ -619,6 +624,7 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
             located.append((children.index(paragraph), section_name, paragraph))
 
     located.sort(key=lambda item: item[0])
+    signature = _signature_start(body)
     for position, (_, section_name, heading) in enumerate(located):
         generated = sections.get(section_name)
         if not generated:
@@ -631,6 +637,10 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
         else:
             end_index = len(current_children)
 
+        if signature is not None and signature in current_children:
+            signature_index = current_children.index(signature)
+            if start_index < signature_index < end_index:
+                end_index = signature_index  # the signatures and appendices after it are not part of the section
         interval = current_children[start_index + 1 : end_index]
         style_source = next(
             (
@@ -649,6 +659,46 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
             new_paragraph = _paragraph_element(style_source, block, kind, bullet)
             anchor.addnext(new_paragraph)
             anchor = new_paragraph
+
+
+def _signature_start(body):
+    """The first element of the signature block (a signature image and name above a
+    "Registered Psychologist ..." line), or None. A generated section ends here."""
+    children = list(body)
+    for index, element in enumerate(children):
+        if element.tag == f"{{{W_NS}}}p" and _element_text(element).strip().startswith("Registered Psychologist"):
+            start = index - 1  # the name above it
+            while start > 0:
+                before = children[start - 1]
+                has_picture = next(before.iter(f"{{{W_NS}}}drawing"), None) is not None
+                if before.tag == f"{{{W_NS}}}p" and (has_picture or not _element_text(before).strip()):
+                    start -= 1
+                else:
+                    break
+            return children[max(start, 0)]
+    return None
+
+
+def _remove_unused_report_card_appendix(root, section_targets, sections) -> None:
+    """With nothing entered for the report card review, its instructions for staff must not
+    end up in the report: take out the appendix (heading to just before Appendix 2)."""
+    aliases = {name: alias_list for name, alias_list in section_targets}
+    if "appendix 1: report card review" not in aliases or (sections.get("appendix 1: report card review") or "").strip():
+        return
+    body = root.find(f"{{{W_NS}}}body")
+    paragraphs = body.xpath("./w:p", namespaces=NS)
+    heading = _find_paragraph(paragraphs, aliases["appendix 1: report card review"])
+    end = _find_paragraph(paragraphs, aliases.get("appendix 2", ()))
+    if heading is None or end is None:
+        return
+    children = list(body)
+    start_index, end_index = children.index(heading), children.index(end)
+    if end_index <= start_index:
+        return
+    for element in children[start_index:end_index]:
+        has_section_break = element.find(f".//{{{W_NS}}}sectPr") is not None
+        if not has_section_break:
+            body.remove(element)
 
 
 def _clean_name(name: str) -> str:
@@ -785,17 +835,29 @@ def _paragraph_element(style_source, text: str, kind: str = "para", bullet: Opti
     """``kind``: "para", "heading" (a short bold line above bullets) or "bullet"
     (a real Word list item copied from the template's own bullets)."""
     paragraph = etree.Element(_w("p"))
-    if kind == "bullet" and bullet is not None:
-        paragraph.append(deepcopy(bullet["ppr"]))
+    if kind in ("bullet", "subbullet") and bullet is not None:
+        properties = deepcopy(bullet["ppr"])
+        if kind == "subbullet":
+            level = properties.find(f".//{_w('ilvl')}")
+            if level is not None:
+                level.set(_w("val"), "1")
+            for indent in properties.findall(_w("ind")):
+                properties.remove(indent)  # a second level takes its indent from the list definition
+        paragraph.append(properties)
         run_properties = _plain_run_properties(bullet["rpr"], drop=_PLAIN_DROP + ("b", "bCs"))
     else:
         paragraph_properties = style_source.find(_w("pPr"))
         if paragraph_properties is not None:
             paragraph.append(_plain_paragraph_properties(paragraph_properties))
         run_properties = _plain_run_properties(style_source.find(f".//{_w('rPr')}"))
-        if kind == "bullet":
-            text = "\u2022 " + text  # the template has no bullet list to copy
+        if kind in ("bullet", "subbullet"):
+            text = ("\u2022 " if kind == "bullet" else "    \u2013 ") + text  # the template has no bullet list to copy
         elif kind == "heading":
+            copied = paragraph.find(_w("pPr"))
+            if copied is not None:
+                for tag in ("numPr", "ind"):  # a heading is not a list item, even if the paragraph it copies is
+                    for node in copied.findall(_w(tag)):
+                        copied.remove(node)
             if run_properties is None:
                 run_properties = etree.Element(_w("rPr"))
             if run_properties.find(_w("b")) is None:
@@ -845,6 +907,11 @@ def _structured_blocks(text: str) -> List[Tuple[str, str]]:
     for line in cleaned.split("\n"):
         if not line.strip():
             continue
+        bold_line = re.fullmatch(r"\s*\*\*(.+?)\*\*:?\s*", line)
+        if bold_line:
+            blocks.append(("heading", bold_line.group(1).strip()))
+            continue
+        indented = bool(re.match(r"^(?:\t|\s{2,})[-*\u2022\u2013]\s", line))
         line = re.sub(r"\*\*(.+?)\*\*", r"\1", line)
         bullet = _BULLET_LINE.match(line)
         heading = re.match(r"^\s*#{1,6}\s+(.*\S)\s*$", line)
@@ -852,7 +919,7 @@ def _structured_blocks(text: str) -> List[Tuple[str, str]]:
             # "- Attention:" is how a model writes a heading above its sub-bullets
             blocks.append(("heading", bullet.group(1).strip().rstrip(":").strip()))
         elif bullet:
-            blocks.append(("bullet", re.sub(r"\s+", " ", bullet.group(1)).strip()))
+            blocks.append(("subbullet" if indented else "bullet", re.sub(r"\s+", " ", bullet.group(1)).strip()))
         elif heading:
             blocks.append(("heading", heading.group(1).strip().rstrip(":")))
         else:
@@ -861,7 +928,7 @@ def _structured_blocks(text: str) -> List[Tuple[str, str]]:
     for index, (kind, text_value) in enumerate(blocks[:-1]):
         if (
             kind == "para"
-            and blocks[index + 1][0] == "bullet"
+            and blocks[index + 1][0] in ("bullet", "subbullet")
             and len(text_value) <= 60
             and not re.search(r"[.!?;,]$", text_value)
         ):

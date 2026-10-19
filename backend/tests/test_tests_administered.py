@@ -87,7 +87,7 @@ def test_section_headings_and_the_signatures_survive():
     items = paragraphs(doc)
     for kept in ("TESTS ADMINISTERED", "General Cognitive Abilities", "Charmaine Miranda, Ph.D.", "(add your signature)"):
         assert kept in items
-    assert any(t.startswith("Appendix 1") for t in items)
+    assert any(t.startswith("Appendix 2") for t in items)
 
 
 def test_headings_left_with_nothing_under_them_go_too():
