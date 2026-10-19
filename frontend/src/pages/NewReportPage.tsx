@@ -14,6 +14,7 @@ import {
   isScoreReportFile,
   resolveTestName,
   selectedItems,
+  testsAdministered,
 } from '../utils/testResults';
 
 export function escapeHtml(value: string) {
@@ -560,7 +561,9 @@ export default function NewReportPage() {
         document_ids: formData.document_ids,
         additional_inputs: generatedSections,
         // Score tables/graphs (uploaded or pasted) the Word export places under each test
-        test_results: buildTestResults(formData.testTableEntries)
+        test_results: buildTestResults(formData.testTableEntries),
+        // Every test added below, with or without results: the template's other tests are removed
+        tests_administered: testsAdministered(formData.testTableEntries)
       };
 
       const savedReport = await api.generateReport(reportData);
@@ -717,6 +720,11 @@ export default function NewReportPage() {
               <div className="space-y-4">
                 {isTestsAdministeredSection(section.title) ? (
                   <div>
+                    <p className="text-sm text-gray-400 mb-3" data-testid="tests-administered-note">
+                      Add every test that was given, with or without a score report. Tests you don&apos;t add
+                      here are removed from the Word report (from the tests lists and from the results). If you
+                      add none, nothing is removed.
+                    </p>
                     {formData.testTableEntries.map((entry, index) => (
                       <div key={index} className="mb-6 p-4 border border-dark-600 rounded">
                         <div className="flex items-start gap-3 mb-3">

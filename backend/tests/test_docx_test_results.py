@@ -27,6 +27,11 @@ def group(test, *, tables=True, image=True):
     return {"test_name": test, "items": items}
 
 
+def given(test):
+    """A test that was administered but has no results attached: its template block stays as it is."""
+    return {"test_name": test, "items": []}
+
+
 def export(title, *groups):
     stream = create_report_docx(
         title=title, patient_name="Alex Test", report_type="x", content=METADATA, test_results=list(groups)
@@ -48,8 +53,8 @@ def index_of(doc, startswith, after=0):
 
 
 def test_results_land_under_the_tests_own_heading_and_replace_its_blank_tables():
-    baseline = export(PSYCHED)
-    doc = export(PSYCHED, group("WISC-V"))
+    baseline = export(PSYCHED, given("WISC-V"), given("WAIS-IV"))
+    doc = export(PSYCHED, group("WISC-V"), given("WAIS-IV"))
 
     items = paragraphs(doc)
     heading = index_of(doc, "WISC-V")
@@ -67,14 +72,14 @@ def test_results_land_under_the_tests_own_heading_and_replace_its_blank_tables()
 
 def test_a_neighbouring_tests_table_is_not_swallowed():
     """WRAML-3's block ends where CVLT-C's heading begins ("cvlt-c" must read as a test)."""
-    doc = export(PSYCHED, group("WRAML-3"))
+    doc = export(PSYCHED, group("WRAML-3"), given("CVLT-C"))
 
     assert any(t.startswith("CVLT-C Auditory Memory Scores") for t in paragraphs(doc))
 
 
 def test_every_psyched_test_lands_in_its_own_block_in_template_order():
     tests = ["WISC-V", "WAIS-IV", "WRAML-3", "CVLT-C", "WIAT-IV", "BRIEF", "ABAS-III"]
-    doc = export(PSYCHED, *[group(t, image=False) for t in tests])
+    doc = export(PSYCHED, *[group(t, image=False) for t in tests], given("Rey Complex Figure Test"))
 
     items = paragraphs(doc)
     positions = [items.index(f"[{t}] scores") for t in tests]
@@ -99,7 +104,7 @@ def test_roman_and_arabic_numerals_match_the_template_wording():
 def test_tables_only_keeps_the_graph_placeholder_and_graph_only_keeps_blank_tables():
     tables_only = export(PSYCHED, group("WISC-V", image=False))
     graph_only = export(PSYCHED, group("WISC-V", tables=False))
-    baseline = export(PSYCHED)
+    baseline = export(PSYCHED, given("WISC-V"))
 
     assert any("insert WISC-V graph here" in t for t in paragraphs(tables_only))
     assert not any("insert WISC-V graph here" in t for t in paragraphs(graph_only))
@@ -146,12 +151,12 @@ def test_generic_export_appends_a_labelled_block():
 
 def test_no_results_leaves_the_export_untouched():
     plain = create_report_docx(title=PSYCHED, patient_name="Alex Test", report_type="x", content=METADATA)
-    with_empty = create_report_docx(
+    empty = create_report_docx(
         title=PSYCHED, patient_name="Alex Test", report_type="x", content=METADATA,
-        test_results=[{"test_name": "WISC-V", "items": []}, {"test_name": "", "items": [{"kind": "table", "rows": [["a", "b"]]}]}],
+        test_results=[{"test_name": "", "items": [{"kind": "table", "rows": [["a", "b"]]}]}],
     )
 
-    assert plain.getvalue() == with_empty.getvalue()
+    assert plain.getvalue() == empty.getvalue()  # no test named anywhere: nothing is placed, nothing removed
 
 
 def test_inserted_tables_keep_word_schema_order_and_are_separated():

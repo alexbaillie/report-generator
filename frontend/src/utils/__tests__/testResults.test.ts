@@ -13,6 +13,7 @@ import {
   parseFillHeader,
   resolveTestName,
   tableCells,
+  testsAdministered,
 } from '../testResults';
 
 const table = (id: string, selected = true): ScoreItem => ({
@@ -158,5 +159,35 @@ describe('fill summary', () => {
     expect(lines[0]).toBe("WISC-V: 1 score filled into the template's own tables.");
     expect(lines.join('\n')).toContain('Naming Speed (NSI)');
     expect(lines.join('\n')).toContain('Nonverbal');
+  });
+});
+
+describe('testsAdministered', () => {
+  it('lists every test that was added, with or without results, once each', () => {
+    expect(
+      testsAdministered([
+        { type: 'WISC-V', customName: '' },
+        { type: 'wisc-v', customName: '' },
+        { type: 'Other', customName: ' BASC-3 teacher ' },
+        { type: '', customName: '' },
+        { type: 'Other', customName: '' },
+      ])
+    ).toEqual(['WISC-V', 'BASC-3 teacher', 'Other']);
+  });
+
+  it('is empty when no test was added, so nothing is removed', () => {
+    expect(testsAdministered([{ type: '', customName: '' }])).toEqual([]);
+  });
+});
+
+describe('describeFill for removed tests', () => {
+  it('lists what was taken out of the report', () => {
+    const lines = describeFill({
+      test_name: 'Tests not marked as administered',
+      result: 'pruned',
+      removed: ['Bayley-4', 'WAIS-IV'],
+    });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('Bayley-4; WAIS-IV');
   });
 });

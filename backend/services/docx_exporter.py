@@ -13,6 +13,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from lxml import etree
 
 from services.docx_test_results import apply_test_results, keep_when_section_is_generated
+from services.test_pruning import prune_unadministered
 
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -226,6 +227,7 @@ def create_report_docx(
     content: str,
     test_results: Optional[Sequence[Mapping]] = None,
     fill_report: Optional[List[dict]] = None,
+    tests_administered: Optional[Sequence[str]] = None,
 ) -> BytesIO:
     """``test_results``: uploaded/pasted score tables and graphs per test, placed
     under that test's section by ``apply_test_results``. ``fill_report``, if given,
@@ -248,6 +250,7 @@ def create_report_docx(
     metadata = _extract_labeled_values(sections.get("report metadata (front page)", ""))
 
     fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
+    pruned_entry = _prune_unadministered_tests(root, section_targets, sections, tests_administered, test_results)
     _fill_generated_sections(root, sections, section_targets, _bullet_prototype(root, template_path))
 
     # Make the leftover template boilerplate readable: use the real name instead
@@ -265,7 +268,32 @@ def create_report_docx(
     patched = _write_patched_package(
         patched_xml, template_path, _patched_header_footer_parts(template_path, clean_name)
     )
-    return apply_test_results(patched, test_results, section_targets, fill_report)
+    result = apply_test_results(patched, test_results, section_targets, fill_report)
+    if pruned_entry is not None and fill_report is not None:
+        fill_report.append(pruned_entry)  # after the per-test entries, which tests index from the front
+    return result
+
+
+def _prune_unadministered_tests(root, section_targets, sections, tests_administered, test_results) -> Optional[dict]:
+    """Take the tests that were not given out of the template (its lists and result blocks).
+    A test counts as given if it was added to the report (with or without results). With no
+    tests recorded at all nothing is removed: we cannot tell what was administered."""
+    names = list(tests_administered or [])
+    names += [group.get("test_name") or "" for group in test_results or []]
+    names += [key[len("test table:"):].strip() for key in sections if key.startswith("test table:")]
+    names = [name for name in names if name.strip()]
+    if not names:
+        return None
+    protected = [alias for _, aliases in section_targets for alias in aliases] + ["Tests Administered"]
+    pruned = prune_unadministered(root, names, protected)
+    if not pruned:
+        return None
+    removed = [label if len(label) <= 70 else label[:67] + "..." for label in pruned["removed"]]
+    return {
+        "test_name": "Tests not marked as administered",
+        "result": "pruned",
+        "removed": removed[:30] + ([f"... and {len(removed) - 30} more"] if len(removed) > 30 else []),
+    }
 
 
 def _create_generic_report_docx(

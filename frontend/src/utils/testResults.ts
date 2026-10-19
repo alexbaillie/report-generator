@@ -88,6 +88,21 @@ export function buildTestResults(entries: TestEntryLike[]): TestResultPayload[] 
   return payload;
 }
 
+/** Every test added to the report, with or without results: the ones the template lists that are not
+ *  in here are removed from the Word export. Nothing is removed if no test was added. */
+export function testsAdministered(entries: Array<Pick<TestEntryLike, 'type' | 'customName'>>): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const entry of entries) {
+    const name = entry.type ? resolveTestName(entry) : '';
+    if (name && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      names.push(name);
+    }
+  }
+  return names;
+}
+
 /** Entries that have results attached but no test chosen would be silently dropped. */
 export function entriesMissingATest(entries: TestEntryLike[]): number {
   return entries.filter((entry) => !resolveTestName(entry) && hasAttachedResults(entry)).length;
@@ -150,7 +165,9 @@ export function headerRows(rows: string[][], merges: number[][] = []): { titles:
 // What the Word export did with a test's scores (the X-Score-Fill response header).
 export interface FillSummary {
   test_name: string;
-  result: 'filled' | 'replaced' | 'added';
+  result: 'filled' | 'replaced' | 'added' | 'pruned';
+  /** pruned: the template's tests that were taken out because they were not marked as administered */
+  removed?: string[];
   filled?: number;
   tables_filled?: number;
   not_administered?: string[];
@@ -173,6 +190,9 @@ export function parseFillHeader(value: unknown): FillSummary[] {
 /** Plain-language lines for one test's summary. Only the things worth a human's attention. */
 export function describeFill(summary: FillSummary): string[] {
   const lines: string[] = [];
+  if (summary.result === 'pruned') {
+    return [`Removed from the Word report because they were not added as administered: ${(summary.removed ?? []).join('; ')}`];
+  }
   if (summary.result === 'filled') {
     const n = summary.filled ?? 0;
     lines.push(`${summary.test_name}: ${n} score${n === 1 ? '' : 's'} filled into the template's own tables.`);

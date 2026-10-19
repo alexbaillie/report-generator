@@ -75,6 +75,9 @@ class GenerateReportRequest(BaseModel):
     document_ids: List[int] = []
     additional_inputs: Dict = {}
     test_results: List[TestResultGroup] = []
+    # Every test added to the report, with or without results. Tests the template lists that
+    # are not in here (or in test_results) are removed from the Word export.
+    tests_administered: List[str] = []
 
 class UpdateReportRequest(BaseModel):
     title: Optional[str] = None
@@ -98,12 +101,23 @@ async def generate_section(request: SectionGenerationRequest, db: Session = Depe
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def _save_test_results(db: Session, report_id: int, groups: List[TestResultGroup]) -> None:
+def _save_tests_administered(db: Session, report_id: int, names: List[str], saved: set, first_position: int) -> None:
+    """Record tests that were given but have no results, as a result row with nothing in it."""
+    for offset, name in enumerate(n.strip() for n in names):
+        if name and name.lower() not in saved:
+            saved.add(name.lower())
+            db.add(ReportTestResult(report_id=report_id, test_name=name, position=first_position + offset,
+                                    payload=json.dumps({"items": [], "mode": "fill"})))
+
+
+def _save_test_results(db: Session, report_id: int, groups: List[TestResultGroup], tests_administered: Optional[List[str]] = None) -> None:
+    saved = set()
     for position, group in enumerate(groups):
         name = group.test_name.strip()
         items = [item.model_dump(exclude_none=True) for item in group.items]
         items += html_to_tables(group.pasted_html)  # every pasted table, not just the first
         if name and items:
+            saved.add(name.lower())
             db.add(
                 ReportTestResult(
                     report_id=report_id,
@@ -112,6 +126,7 @@ def _save_test_results(db: Session, report_id: int, groups: List[TestResultGroup
                     payload=json.dumps({"items": items, "mode": group.mode}),
                 )
             )
+    _save_tests_administered(db, report_id, tests_administered or [], saved, len(groups))
 
 
 @router.post("/generate", response_model=ReportResponse)
@@ -135,7 +150,7 @@ async def generate_report_endpoint(request: GenerateReportRequest, db: Session =
         )
         db.add(report)
         db.flush()  # need the id for the attached test results; commit once below
-        _save_test_results(db, report.id, request.test_results)
+        _save_test_results(db, report.id, request.test_results, request.tests_administered)
         db.commit()
         db.refresh(report)
 
@@ -188,6 +203,8 @@ async def list_test_results(report_id: int, db: Session = Depends(get_db)):
     summaries = []
     for result in report.test_results:
         items = json.loads(result.payload).get("items", [])
+        if not items:
+            continue  # a test that was given but has no results attached
         summaries.append(
             TestResultSummary(
                 test_name=result.test_name,
@@ -224,6 +241,7 @@ async def export_report_docx(report_id: int, db: Session = Depends(get_db)):
             content=report.content,
             test_results=[_stored_group(r) for r in report.test_results],
             fill_report=fill_report,
+            tests_administered=[r.test_name for r in report.test_results],
         )
     except DocxExportError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
