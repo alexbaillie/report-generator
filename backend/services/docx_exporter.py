@@ -127,6 +127,7 @@ CDBC_FRONT_LABELS: Mapping[str, Sequence[str]] = {
     "date of birth": ("date of birth",),
     "date of assessment": ("date(s) of assessment", "dates of assessment", "date of assessment"),
     "age at assessment": ("age at assessment", "chronological age"),
+    "legal guardian": ("legal guardian", "legal guardian(s)", "legal guardians", "guardian"),
     "date of report": ("date of report",),
     "date of conference": ("date of conference",),
 }
@@ -252,8 +253,15 @@ def create_report_docx(
     root = etree.fromstring(document_xml)
     sections = parse_markdown_sections(content)
     metadata = _extract_labeled_values(sections.get("report metadata (front page)", ""))
+    _normalise_metadata(metadata)
+    # The template's own tests list stays (trimmed to the tests given); a paragraph written in its place
+    # would also replace the interpretation notes and validity text that follow the list.
+    sections.pop("tests administered", None)
 
     fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
+    if template_path in (CDBC_BOY_TEMPLATE_PATH, CDBC_GIRL_TEMPLATE_PATH):
+        _apply_sunny_hill_standard_sections(root, sections, metadata)
+    _remove_staff_instructions(root)
     pruned_entry = _prune_unadministered_tests(root, section_targets, sections, tests_administered, test_results)
     _fill_generated_sections(root, sections, section_targets, _bullet_prototype(root, template_path))
     _remove_unused_report_card_appendix(root, section_targets, sections)
@@ -271,7 +279,8 @@ def create_report_docx(
         standalone=True,
     )
     patched = _write_patched_package(
-        patched_xml, template_path, _patched_header_footer_parts(template_path, clean_name)
+        patched_xml, template_path,
+        _patched_header_footer_parts(template_path, clean_name, metadata.get("chart number", "")),
     )
     result = apply_test_results(patched, test_results, section_targets, fill_report)
     if pruned_entry is not None and fill_report is not None:
@@ -376,10 +385,10 @@ def _write_patched_package(
     return output
 
 
-def _patched_header_footer_parts(template_path: Path, full_name: str) -> Dict[str, bytes]:
-    """The running header ("... Report for JOE LASTNAME") lives in its own part,
-    not document.xml, so it needs the same placeholder-name swap as the body."""
-    if not full_name:
+def _patched_header_footer_parts(template_path: Path, full_name: str, chart_number: str = "") -> Dict[str, bytes]:
+    """The running header ("... Report for JOE LASTNAME", the chart number) lives in its own
+    part, not document.xml, so it needs the same placeholder swaps as the body."""
+    if not full_name and not chart_number:
         return {}
     parts: Dict[str, bytes] = {}
     with ZipFile(template_path, "r") as source:
@@ -387,6 +396,10 @@ def _patched_header_footer_parts(template_path: Path, full_name: str) -> Dict[st
             if re.fullmatch(r"word/(header|footer)\d*\.xml", name):
                 part_root = etree.fromstring(source.read(name))
                 _replace_placeholder_names(part_root, full_name)
+                if chart_number:
+                    for node in part_root.iter(f"{{{W_NS}}}t"):
+                        if node.text and "000-00-00" in node.text:
+                            node.text = node.text.replace("000-00-00", chart_number)
                 parts[name] = etree.tostring(
                     part_root, encoding="UTF-8", xml_declaration=True, standalone=True
                 )
@@ -656,6 +669,8 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
             heading,
         )
         for position_in_interval, element in enumerate(interval):
+            if _is_page_break(element):
+                continue  # the template's own page breaks (e.g. before Appendix 2) are layout, not prose
             if element.tag == f"{{{W_NS}}}p" and not keep_when_section_is_generated(interval, position_in_interval):
                 body.remove(element)
 
@@ -664,6 +679,82 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
             new_paragraph = _paragraph_element(style_source, block, kind, bullet)
             anchor.addnext(new_paragraph)
             anchor = new_paragraph
+
+
+def _is_page_break(element) -> bool:
+    if element.tag != f"{{{W_NS}}}p" or _element_text(element).strip():
+        return False
+    return any(br.get(f"{{{W_NS}}}type") == "page" for br in element.iter(f"{{{W_NS}}}br"))
+
+
+def _normalise_metadata(metadata: Dict[str, str]) -> None:
+    """A bare age ("14") reads as "14 years" on the front page, as in the clinic's examples."""
+    for key in ("age at assessment", "chronological age"):
+        value = (metadata.get(key) or "").strip()
+        if re.fullmatch(r"\d+(?:\.\d+)?", value):
+            metadata[key] = f"{value} years"
+
+
+# Instructions for staff that sit in the template body and must never reach a finished report.
+STAFF_INSTRUCTIONS = ("very brief summary of previous issues at school",)
+
+
+def _remove_staff_instructions(root) -> None:
+    body = root.find(f"{{{W_NS}}}body")
+    for paragraph in body.xpath("./w:p", namespaces=NS):
+        if _normalize(_element_text(paragraph)) in STAFF_INSTRUCTIONS:
+            body.remove(paragraph)
+
+
+def _article_for(age: int) -> str:
+    return "an" if age in (8, 11, 18) or 80 <= age <= 89 else "a"
+
+
+def _replace_in_paragraph(paragraph, old: str, new: str) -> bool:
+    text_nodes = list(paragraph.iter(f"{{{W_NS}}}t"))
+    for node in text_nodes:
+        if node.text and old in node.text:
+            node.text = node.text.replace(old, new)
+            return True
+    joined = "".join(node.text or "" for node in text_nodes)
+    if old in joined:  # split across runs: rewrite the paragraph's text (keeps its first run's formatting)
+        _set_element_text(paragraph, joined.replace(old, new))
+        return True
+    return False
+
+
+def _apply_sunny_hill_standard_sections(root, sections: Dict[str, str], metadata: Mapping[str, str]) -> None:
+    """The Sunny Hill template already carries the clinic's standard Reason for Referral and
+    Sources of Information wording. It is kept (with the child's age and referring doctor filled
+    in); anything typed for those sections is added as typed, never rewritten."""
+    body = root.find(f"{{{W_NS}}}body")
+    paragraphs = body.xpath("./w:p", namespaces=NS)
+
+    typed_reason = (sections.pop("reason for referral", "") or "").strip()
+    standard = next(
+        (p for p in paragraphs if re.search(r"\bis an? xx-year-old\b", _element_text(p))), None
+    )
+    if standard is not None:
+        age = re.search(r"\d+", metadata.get("age at assessment", "") or "")
+        if age:
+            number = int(age.group(0))
+            _replace_in_paragraph(standard, "a xx-year-old", f"{_article_for(number)} {number}-year-old")
+            _replace_in_paragraph(standard, "an xx-year-old", f"{_article_for(number)} {number}-year-old")
+        doctor = (metadata.get("referring doctor") or "").strip()
+        if doctor:
+            name = doctor if re.match(r"(?i)dr\.?\s", doctor) else f"Dr. {doctor}"
+            _replace_in_paragraph(standard, "Dr. Drname", name)
+        if typed_reason:
+            anchor = standard
+            for line in typed_reason.splitlines():
+                if line.strip():
+                    extra = _paragraph_element(standard, line.strip())
+                    anchor.addnext(extra)
+                    anchor = extra
+
+    # Sources of Information: the typed text replaces the standard sentence; otherwise the sentence stays.
+    if not (sections.get("sources of information") or "").strip():
+        sections.pop("sources of information", None)
 
 
 def _signature_start(body):
