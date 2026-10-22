@@ -66,6 +66,13 @@ async def generate_report_section(
     # Get documents
     documents = db.query(Document).filter(Document.id.in_(document_ids)).all()
     
+    if is_clinic_template(template) and (section_name or '').strip().lower() == 'tests administered':
+        # The template's own tests list is kept (and trimmed to the tests given); no paragraph is written for it.
+        return ''
+
+    if wants_verbatim(template, section_name):
+        return verbatim_text(section_inputs)
+
     if is_report_card_section(section_name):
         # Report-card comments are reproduced exactly as typed, laid out in the template's format.
         return compose_report_card_review(section_inputs)
@@ -152,6 +159,36 @@ async def generate_by_area(template, section_name: str, documents, section_input
         if text:
             parts.append(area_heading(label) + "\n" + text)
     return "\n".join(parts)
+
+
+VERBATIM_SECTION_PREFIXES = ("diagnostic summary", "reason for referral", "sources of information")
+
+
+def _is_cdbc(template) -> bool:
+    name = (getattr(template, "name", "") or "").lower()
+    return "cdbc" in name or "sunny hill" in name or "sunnyhill" in name
+
+
+def is_clinic_template(template) -> bool:
+    """The branded clinic templates (their Word files carry the wording the clinic wants)."""
+    name = (getattr(template, "name", "") or "").lower()
+    return _is_cdbc(template) or "psycho-educational" in name or "asd" in name or "autism" in name
+
+
+def wants_verbatim(template, section_name: str) -> bool:
+    """Sunny Hill sections whose text is the clinic's standard wording or a plain list: what is
+    typed goes in as typed (the model rewrote diagnoses into explanations and expanded the
+    standard sentences)."""
+    return _is_cdbc(template) and (section_name or "").strip().lower().startswith(VERBATIM_SECTION_PREFIXES)
+
+
+def verbatim_text(section_inputs: Dict) -> str:
+    lines = []
+    for value in (section_inputs or {}).values():
+        for line in str(value or "").replace("\r\n", "\n").split("\n"):
+            if line.strip():
+                lines.append(line.strip())
+    return "\n".join(lines)
 
 
 def wants_bullets(template, section_name: str) -> bool:
