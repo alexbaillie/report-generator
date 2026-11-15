@@ -167,6 +167,8 @@ def entry_lines(value) -> List[str]:
         text = unescape(text)
     lines = []
     for raw in text.split("\n"):
+        if re.match(r"^\s*#{1,6}\s+\S", raw):
+            continue  # a pasted "# Family History" heading, not something to report
         line = re.sub(r"^\s*[-*\u2022\u2013\u25cf]\s*", "", raw)
         line = re.sub(r"\s+", " ", line).strip().rstrip(";").strip()
         if line:
