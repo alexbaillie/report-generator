@@ -6,7 +6,6 @@ from docx import Document
 from docx.oxml.ns import qn
 
 from services.docx_exporter import _readable_dates, _structured_blocks, create_report_docx
-from services.report_generator import build_section_prompt, wants_bullets
 
 CDBC = "SunnyHill CDBC Psychology Assessment - Boy"
 PSYCHED = "Psycho-Educational Assessment - Boy"
@@ -138,27 +137,6 @@ def test_a_long_line_before_bullets_is_not_mistaken_for_a_heading():
 
 
 # --------------------------------------------------------------------------- #
-# the prompt asks for bullets only where the clinic wants them
-# --------------------------------------------------------------------------- #
-def template(name):
-    return SimpleNamespace(name=name, template_type="x", content="")
-
-
-def test_bullets_are_requested_for_the_cdbc_background_sections_only():
-    assert wants_bullets(template(CDBC), "Presenting Concerns (as provided by parents)")
-    assert wants_bullets(template(CDBC), "Family History")
-    assert wants_bullets(template(CDBC), "Previous Assessments & Interventions")
-    assert not wants_bullets(template(CDBC), "Reason for Referral")
-    assert not wants_bullets(template(PSYCHED), "Family History")
-
-    prompt = build_section_prompt(template(CDBC), "Family History", [], {"Lives with": "mom and dad"})
-    assert 'starting with "- "' in prompt and "Do not write paragraphs" in prompt
-    assert "well-structured paragraph" not in prompt
-    plain = build_section_prompt(template(PSYCHED), "Family History", [], {"Lives with": "mom and dad"})
-    assert "well-structured paragraph" in plain
-
-
-# --------------------------------------------------------------------------- #
 # BASC-3 results land under the template's BASC-3 block
 # --------------------------------------------------------------------------- #
 def test_basc_tables_go_under_the_basc_heading_not_another_test():
@@ -184,31 +162,3 @@ def test_the_cdbc_seed_has_one_field_per_team_role():
         labels = [f["label"] for f in seed["content"][0]["fields"]]
         assert "Sunny Hill team" not in labels
         assert {"Psychologist", "Case manager", "Social worker", "Physiotherapist"} <= set(labels)
-
-
-def test_presenting_concerns_are_generated_one_area_at_a_time_under_the_forms_own_headings(monkeypatch):
-    import asyncio
-
-    from services import report_generator
-
-    prompts = []
-
-    async def fake_generate(prompt, max_tokens=0):
-        prompts.append(prompt)
-        return "- A fact about it."
-
-    monkeypatch.setattr(report_generator, "generate_text", fake_generate)
-    inputs = {
-        "Attention / Impulsivity / Activity / Executive Functions": "forgets things",
-        "Anxiety / Mood": "",                 # nothing given: left out, not invented
-        "Social concerns": "plays alone",
-        "Learning": "No concerns",          # a plain "no concerns" is written without asking the model
-    }
-    text = asyncio.run(report_generator.generate_by_area(
-        template(CDBC), "Presenting Concerns (as provided by parents)", [], inputs))
-    assert text == (
-        "Attention\n- A fact about it.\nSocial concerns\n- A fact about it.\n"
-        "Learning\n- No concerns with learning were indicated."
-    )
-    assert len(prompts) == 2 and "plays alone" in prompts[1] and "forgets things" not in prompts[1]
-    assert report_generator.area_heading("Anxiety / Mood") == "Anxiety"

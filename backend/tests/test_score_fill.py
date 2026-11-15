@@ -7,7 +7,7 @@ from docx import Document
 from docx.oxml.ns import qn
 
 from services.docx_exporter import create_report_docx
-from services.docx_test_results import _build_table
+from services.docx_test_results import HEADER_FILL, _build_table
 from services.score_fill import parse_source_tables, split_label
 from services.score_report_extractor import extract_score_report
 from tests.score_report_samples import bar_chart_png
@@ -269,13 +269,13 @@ def test_title_row_is_not_shaded_as_the_header():
         return None if shd is None else shd.get(qn("w:fill"))
 
     assert fill(0) is None
-    assert fill(1) == "D9E2F3"
+    assert fill(1) == HEADER_FILL
 
 
 def test_plain_table_still_shades_its_first_row():
     table = build([["Index", "Score"], ["A", "1"]])
     shd = table.rows[0].cells[0]._tc.tcPr.find(qn("w:shd"))
-    assert shd.get(qn("w:fill")) == "D9E2F3"
+    assert shd.get(qn("w:fill")) == HEADER_FILL
 
 
 # --------------------------------------------------------------------------- #
