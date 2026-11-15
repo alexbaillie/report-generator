@@ -33,6 +33,7 @@ from io import BytesIO
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from docx import Document
+from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -42,7 +43,10 @@ from services.score_fill import cell_text, fill_template_tables, header_field, p
 
 P, TBL, SECT_PR = qn("w:p"), qn("w:tbl"), qn("w:sectPr")
 HEADING_MAX_CHARS = 100
-HEADER_FILL = "D9E2F3"
+# The clinic's own score tables (Emma's blank tables): grey header fill, black 0.5pt borders, 10pt text.
+HEADER_FILL = "D9D9D9"
+BORDER_COLOR = "000000"
+TABLE_FONT_PT = 10
 
 # Test families used to tell where one test's block ends and the next begins.
 KNOWN_FAMILIES = frozenset(
@@ -285,7 +289,14 @@ def _place_in_template_block(
 
         remove: List = []
         if has_tables:
-            remove += shells + _labels_for(shells, children, anchor)
+            labels = _labels_for(shells, children, anchor)
+            if not all((i.get("caption") or "").strip() for i in items if i.get("kind") == "table"):
+                # a pasted table has no caption of its own: keep the template's caption above where it goes
+                position = {id(el): n for n, el in enumerate(children)}
+                first_shell = min(shells, key=lambda el: position[id(el)])
+                keep = _labels_for([first_shell], children, anchor)
+                labels = [label for label in labels if label not in keep]
+            remove += shells + labels
         if has_images:
             remove += placeholders
 
@@ -536,7 +547,7 @@ def _build_table(
     borders = OxmlElement("w:tblBorders")
     for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
         border = OxmlElement(f"w:{edge}")
-        for key, value in (("val", "single"), ("sz", "4"), ("space", "0"), ("color", "808080")):
+        for key, value in (("val", "single"), ("sz", "4"), ("space", "0"), ("color", BORDER_COLOR)):
             border.set(qn(f"w:{key}"), value)
         borders.append(border)
     # tblPr children must stay in schema order: borders go before layout/margins/look
@@ -573,6 +584,7 @@ def _build_table(
             if (r, c) in covered:
                 continue
             cell = table.cell(r, c)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             paragraph = cell.paragraphs[0]
             paragraph.paragraph_format.space_before = Pt(0)
             paragraph.paragraph_format.space_after = Pt(0)
@@ -581,7 +593,7 @@ def _build_table(
             for line in lines[1:]:
                 run.add_break()
                 run.add_text(line)
-            run.font.size = Pt(9)
+            run.font.size = Pt(TABLE_FONT_PT)
             _set_font(run, font)
             if r in title_rows:
                 run.bold = True
