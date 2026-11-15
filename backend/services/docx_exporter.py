@@ -259,17 +259,22 @@ def create_report_docx(
     sections.pop("tests administered", None)
 
     fill_front_page(root, title=title, patient_name=patient_name, metadata=metadata)
-    if template_path in (CDBC_BOY_TEMPLATE_PATH, CDBC_GIRL_TEMPLATE_PATH):
-        _apply_sunny_hill_standard_sections(root, sections, metadata)
+    is_cdbc = template_path in (CDBC_BOY_TEMPLATE_PATH, CDBC_GIRL_TEMPLATE_PATH)
+    typed_paragraphs: set = set()
+    if is_cdbc:
+        typed_paragraphs.update(_apply_sunny_hill_standard_sections(root, sections, metadata))
     _remove_staff_instructions(root)
     pruned_entry = _prune_unadministered_tests(root, section_targets, sections, tests_administered, test_results)
-    _fill_generated_sections(root, sections, section_targets, _bullet_prototype(root, template_path))
+    _fill_generated_sections(
+        root, sections, section_targets, _bullet_prototype(root, template_path),
+        typed_sections=CDBC_TYPED_SECTIONS if is_cdbc else frozenset(), protected=typed_paragraphs,
+    )
     _remove_unused_report_card_appendix(root, section_targets, sections)
 
     # Make the leftover template boilerplate readable: use the real name instead
     # of the "Jane/Joe Lastname" placeholders, and drop instructional highlighting.
     clean_name = _clean_name(metadata.get("client full name") or metadata.get("name") or patient_name)
-    _replace_placeholder_names(root, clean_name)
+    _replace_placeholder_names(root, clean_name, typed_paragraphs)
     _strip_highlighting(root)
 
     patched_xml = etree.tostring(
@@ -622,7 +627,10 @@ def _fill_team(paragraphs, metadata: Mapping[str, str]) -> None:
         _set_labelled_value(paragraph, label, value)
 
 
-def _fill_generated_sections(root, sections: Mapping[str, str], section_targets, bullet: Optional[dict] = None) -> None:
+def _fill_generated_sections(
+    root, sections: Mapping[str, str], section_targets, bullet: Optional[dict] = None,
+    typed_sections=frozenset(), protected: Optional[set] = None,
+) -> None:
     body = root.find(f"{{{W_NS}}}body")
     if body is None:
         raise DocxExportError("The Word template has no document body.")
@@ -677,6 +685,8 @@ def _fill_generated_sections(root, sections: Mapping[str, str], section_targets,
         anchor = heading
         for kind, block in _structured_blocks(generated):
             new_paragraph = _paragraph_element(style_source, block, kind, bullet)
+            if protected is not None and section_name in typed_sections:
+                protected.add(new_paragraph)
             anchor.addnext(new_paragraph)
             anchor = new_paragraph
 
@@ -723,12 +733,21 @@ def _replace_in_paragraph(paragraph, old: str, new: str) -> bool:
     return False
 
 
-def _apply_sunny_hill_standard_sections(root, sections: Dict[str, str], metadata: Mapping[str, str]) -> None:
+# Sunny Hill sections whose text is exactly what was typed (the model is not involved).
+CDBC_TYPED_SECTIONS = frozenset({
+    "presenting concerns (as provided by parents)", "areas of relative strength & interests", "family history",
+    "developmental & medical history", "educational history", "previous assessments & interventions",
+    "diagnostic summary (dsm-5-tr)", "reason for referral", "sources of information", "appendix 1: report card review",
+})
+
+
+def _apply_sunny_hill_standard_sections(root, sections: Dict[str, str], metadata: Mapping[str, str]) -> List:
     """The Sunny Hill template already carries the clinic's standard Reason for Referral and
     Sources of Information wording. It is kept (with the child's age and referring doctor filled
     in); anything typed for those sections is added as typed, never rewritten."""
     body = root.find(f"{{{W_NS}}}body")
     paragraphs = body.xpath("./w:p", namespaces=NS)
+    typed_paragraphs: List = []
 
     typed_reason = (sections.pop("reason for referral", "") or "").strip()
     standard = next(
@@ -750,11 +769,13 @@ def _apply_sunny_hill_standard_sections(root, sections: Dict[str, str], metadata
                 if line.strip():
                     extra = _paragraph_element(standard, line.strip())
                     anchor.addnext(extra)
+                    typed_paragraphs.append(extra)
                     anchor = extra
 
     # Sources of Information: the typed text replaces the standard sentence; otherwise the sentence stays.
     if not (sections.get("sources of information") or "").strip():
         sections.pop("sources of information", None)
+    return typed_paragraphs
 
 
 def _signature_start(body):
@@ -805,9 +826,11 @@ def _clean_name(name: str) -> str:
     return name
 
 
-def _replace_placeholder_names(root, full_name: str) -> None:
+def _replace_placeholder_names(root, full_name: str, protected=None) -> None:
     """Swap the template's "Jane/Joe Lastname" placeholders for the real name
-    throughout the document, preserving ALL-CAPS styling where used."""
+    throughout the document, preserving ALL-CAPS styling where used. ``protected``
+    holds paragraphs of text somebody typed, which are left alone: a parent really
+    called Jane or Joe must not be turned into the child."""
     if not full_name:
         return
     parts = full_name.split()
@@ -819,12 +842,20 @@ def _replace_placeholder_names(root, full_name: str) -> None:
     for node in root.iter(f"{{{W_NS}}}t"):
         if not node.text:
             continue
+        if protected and _enclosing_paragraph(node) in protected:
+            continue
         text = re.sub(r"(?i)\b(?:jane|joe)\s+lastname\b", lambda m: _cased(m, full_name), node.text)
         text = re.sub(r"(?i)\b(?:jane|joe)\b", lambda m: _cased(m, first), text)
         if last:
             text = re.sub(r"(?i)\blastname\b", lambda m: _cased(m, last), text)
         if text != node.text:
             node.text = text
+
+
+def _enclosing_paragraph(node):
+    while node is not None and node.tag != f"{{{W_NS}}}p":
+        node = node.getparent()
+    return node
 
 
 def _strip_highlighting(root) -> None:
