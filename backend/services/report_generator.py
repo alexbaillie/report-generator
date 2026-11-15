@@ -2,6 +2,7 @@
 Report generation service using Ollama AI
 """
 import re
+from html import unescape
 from sqlalchemy.orm import Session
 from typing import List, Dict
 from database.models import Template, Document
@@ -77,10 +78,9 @@ async def generate_report_section(
         # Report-card comments are reproduced exactly as typed, laid out in the template's format.
         return compose_report_card_review(section_inputs)
 
-    if wants_bullets(template, section_name) and (section_name or '').strip().lower().startswith('presenting concerns'):
-        by_area = await generate_by_area(template, section_name, documents, section_inputs)
-        if by_area:
-            return by_area
+    if wants_as_entered(template, section_name):
+        # The clinic wants these background sections exactly as entered: one entry, one bullet.
+        return as_entered_bullets(section_name, section_inputs)
 
     # Build prompt for section
     prompt = build_section_prompt(template, section_name, documents, section_inputs)
@@ -89,38 +89,6 @@ async def generate_report_section(
     section_content = await generate_text(prompt, max_tokens=1500)
     
     return section_content
-
-# The Sunny Hill CDBC reports list these background sections as bullet points, not paragraphs.
-BULLET_SECTION_PREFIXES = (
-    "presenting concerns",
-    "areas of relative strength",
-    "family history",
-    "developmental & medical history",
-    "educational history",
-    "previous assessments",
-)
-
-
-def bullet_instructions(template, section_name: str) -> str:
-    name = (getattr(template, "name", "") or "").lower()
-    girl = "girl" in name
-    # "Joe"/"Jane" are the templates' own placeholder names; the Word export swaps them for the client's real name.
-    child, pronoun = ("Jane", "she") if girl else ("Joe", "he")
-    text = (
-        "\n\nInstructions: Write this section as bullet points, one fact per line, each line starting with \"- \". "
-        "Each bullet is one short, complete sentence in the third person. Do not write paragraphs, and do not nest "
-        "bullets under other bullets. "
-        f"Refer to the child as \"{child}\" (and \"{pronoun}\" after that); never make up any other name. "
-        "Use only the information given and do not add facts. Be clear, objective and clinically appropriate. "
-        "Do not use italics, bold or any markdown other than the leading \"- \"."
-    )
-    text += (
-        " Do not use headings. Do not write bullets about information that is missing, unreported or unknown. "
-        "If the information says there are no concerns, write one bullet saying so, for example "
-        "'No concerns with anxiety were indicated.'"
-    )
-    return text
-
 
 def area_heading(label: str) -> str:
     """'Attention / Impulsivity / Activity' -> 'Attention'; 'Social concerns (peers)' -> 'Social concerns'."""
@@ -141,24 +109,6 @@ def no_concerns_bullet(heading: str, value: str) -> str:
     if area.endswith(" concerns"):
         return f"- No {area} were indicated."
     return f"- No concerns with {area} were indicated."
-
-
-async def generate_by_area(template, section_name: str, documents, section_inputs: Dict) -> str:
-    """One short generation per area the person filled in, each under that area's heading, so every
-    area is present and labelled however well the model follows a formatting instruction."""
-    parts = []
-    for label, value in section_inputs.items():
-        if not str(value or '').strip():
-            continue
-        no_concerns = no_concerns_bullet(area_heading(label), str(value))
-        if no_concerns:  # a plain "no concerns" needs no model, which tends to pad it with invented bullets
-            parts.append(area_heading(label) + "\n" + no_concerns)
-            continue
-        prompt = build_section_prompt(template, section_name, documents, {label: value})
-        text = (await generate_text(prompt, max_tokens=700)).strip()
-        if text:
-            parts.append(area_heading(label) + "\n" + text)
-    return "\n".join(parts)
 
 
 VERBATIM_SECTION_PREFIXES = ("diagnostic summary", "reason for referral", "sources of information")
@@ -191,11 +141,55 @@ def verbatim_text(section_inputs: Dict) -> str:
     return "\n".join(lines)
 
 
-def wants_bullets(template, section_name: str) -> bool:
-    name = (getattr(template, "name", "") or "").lower()
-    if "cdbc" not in name and "sunny hill" not in name and "sunnyhill" not in name:
-        return False
-    return (section_name or "").strip().lower().startswith(BULLET_SECTION_PREFIXES)
+# The Sunny Hill background sections (the clinic's file review) are written exactly as entered, not by the model.
+AS_ENTERED_SECTION_PREFIXES = (
+    "presenting concerns",
+    "areas of relative strength",
+    "family history",
+    "developmental & medical history",
+    "educational history",
+    "previous assessments",
+)
+
+
+def wants_as_entered(template, section_name: str) -> bool:
+    return _is_cdbc(template) and (section_name or "").strip().lower().startswith(AS_ENTERED_SECTION_PREFIXES)
+
+
+def entry_lines(value) -> List[str]:
+    """What was typed (or pasted) in one box, one line per bullet. A pasted table is read row by row,
+    its cells joined with "; ". Nothing is reworded, split or merged beyond that."""
+    text = str(value or "").replace("\r\n", "\n")
+    if "<" in text and ">" in text:
+        text = re.sub(r"(?i)</t[dh]\s*>", "; ", text)
+        text = re.sub(r"(?i)<br\s*/?>|</(?:tr|p|div|li)\s*>", "\n", text)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = unescape(text)
+    lines = []
+    for raw in text.split("\n"):
+        line = re.sub(r"^\s*[-*\u2022\u2013\u25cf]\s*", "", raw)
+        line = re.sub(r"\s+", " ", line).strip().rstrip(";").strip()
+        if line:
+            lines.append(line)
+    return lines
+
+
+def as_entered_bullets(section_name: str, section_inputs: Dict) -> str:
+    """Bullets in the order of the form's boxes, one per line typed. Presenting concerns keep the
+    form's area names as headings, and a plain "no concerns" answer reads as the clinic writes it."""
+    areas = (section_name or "").strip().lower().startswith("presenting concerns")
+    out: List[str] = []
+    for label, value in (section_inputs or {}).items():
+        lines = entry_lines(value)
+        if not lines:
+            continue
+        if areas:
+            heading = area_heading(label)
+            out.append(f"**{heading}**")
+            out.append(no_concerns_bullet(heading, str(value)) or "\n".join(f"- {line}" for line in lines))
+        else:
+            out += [f"- {line}" for line in lines]
+    return "\n".join(out)
 
 
 def build_section_prompt(template: Template, section_name: str, documents: List[Document], section_inputs: Dict) -> str:
@@ -218,10 +212,6 @@ def build_section_prompt(template: Template, section_name: str, documents: List[
         "\n\nInstructions: Write a professional, well-structured paragraph for this section of the psychological report.",
         "Focus on being clear, objective, and clinically appropriate. Use formal psychological terminology where appropriate.",
     ]
-    bullets = wants_bullets(template, section_name)
-    if bullets:
-        prompt_parts[-2:] = [bullet_instructions(template, section_name)]
-
     # Add document contents if relevant to this section
     if documents:
         prompt_parts.append("\n\nRelevant Source Documents:")
@@ -237,7 +227,7 @@ def build_section_prompt(template: Template, section_name: str, documents: List[
                 prompt_parts.append(f"\n{key}: {value}")
     
     # Add section-specific guidance from template AI_use instructions
-    section_guidance = "" if bullets else extract_section_guidance(template.content, section_name)
+    section_guidance = extract_section_guidance(template.content, section_name)
     if section_guidance:
         prompt_parts.append(f"\n\nSection Guidance:\n{section_guidance}")
     

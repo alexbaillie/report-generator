@@ -241,10 +241,6 @@
         {
           "label": "Learning",
           "type": "textarea"
-        },
-        {
-          "label": "School-related",
-          "type": "textarea"
         }
       ]
     },
@@ -589,5 +585,9 @@
         }
       ]
     }
+  ],
+  "replaces": [
+    "f4816d973e1b8190c46b2ccbd40b85d0b509190455e213b5c870ec957e10206e",
+    "b64c0d39aaabc485a0716c2fd456c02ae6d9616dd1d6589740ea8eb9dab30ada"
   ]
 }

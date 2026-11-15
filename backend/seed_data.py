@@ -21,6 +21,7 @@ Templates are matched by name. By default an existing template's metadata
 only if it is missing or shorter than the seed (this repairs a truncated template
 without clobbering deliberate edits). ``--force`` overwrites content unconditionally.
 """
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -51,6 +52,22 @@ def load_seed_templates():
     return templates
 
 
+def content_hash(content: str) -> str:
+    return hashlib.sha256((content or "").encode("utf-8")).hexdigest()
+
+
+def should_refresh_content(existing_content: str, seed: dict, force: bool = False) -> bool:
+    """Replace an installed template's content with the seed's when forced, missing, shorter than the seed
+    (a truncated template), or exactly a version this seed says it replaces (``replaces``: sha256 of
+    earlier shipped contents). The last one lets a template get *shorter* without touching a template
+    somebody edited, which never matches a shipped version."""
+    if force or not existing_content:
+        return True
+    if len(existing_content) < len(seed["content"]):
+        return True
+    return content_hash(existing_content) in set(seed.get("replaces") or [])
+
+
 def seed_templates(force: bool = False):
     """Create or update every template defined under seeds/."""
     init_db()
@@ -79,7 +96,7 @@ def seed_templates(force: bool = False):
                     setattr(existing, attr, seed[attr]); changed = True
             if existing.is_default != seed.get("is_default", False):
                 existing.is_default = seed.get("is_default", False); changed = True
-            if force or not existing.content or len(existing.content) < len(seed["content"]):
+            if should_refresh_content(existing.content, seed, force):
                 if existing.content != seed["content"]:
                     existing.content = seed["content"]; changed = True
             if changed:
