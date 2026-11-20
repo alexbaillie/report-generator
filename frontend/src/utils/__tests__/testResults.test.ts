@@ -160,6 +160,17 @@ describe('fill summary', () => {
     expect(lines.join('\n')).toContain('Naming Speed (NSI)');
     expect(lines.join('\n')).toContain('Nonverbal');
   });
+
+  it('says when the template tables were changed to the layout that was pasted', () => {
+    const lines = describeFill({
+      test_name: 'ABAS-III',
+      result: 'filled',
+      filled: 84,
+      layout: 'abas3_option2',
+      layout_label: 'separate ABAS-3 parent and teacher tables',
+    });
+    expect(lines[1]).toContain('separate ABAS-3 parent and teacher tables');
+  });
 });
 
 describe('testsAdministered', () => {

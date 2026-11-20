@@ -187,10 +187,13 @@ def test_a_column_is_only_filled_from_the_same_kind_of_score():
         "rows": [["Subtest", "Code", "Standard Score", "Percentile Rank"],
                  ["Similarities", "SI", "101", "53"]],
     }
-    doc = export(PSYCHED, {"test_name": "WISC-V", "items": [wrong_kind]})
-    assert not any("101" in r for r in rows_with(doc, "Similarities (SI)"))   # never into a scaled-score column
-    filled = [r for r in rows_with(doc, "Similarities (SI)") if r[-1]]
-    assert len(filled) == 1 and filled[0][-1] == "53" and filled[0][-2] == ""  # the percentile still fills
+    from services.score_fill import fill_template_tables
+    baseline = export(PSYCHED)
+    table = next(t for t in baseline.tables if t.rows[1].cells[0].text.startswith("Similarities (SI)"))
+    stats = fill_template_tables([table._tbl], parse_source_tables([wrong_kind]))
+    assert stats.filled == 0                      # never into a scaled-score column...
+    assert [c.text for c in table.rows[1].cells[2:]] == ["", ""]   # ...and no lone percentile beside an empty score
+    assert any("Similarities" in c and "standard score" in c for c in stats.unfilled_columns)
 
 
 def test_graph_replaces_the_placeholder_while_tables_are_filled():
