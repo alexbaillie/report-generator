@@ -39,6 +39,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt
 
+from services import score_layouts
 from services.score_fill import cell_text, fill_template_tables, header_field, parse_source_tables, summarize
 
 P, TBL, SECT_PR = qn("w:p"), qn("w:tbl"), qn("w:sectPr")
@@ -103,9 +104,15 @@ def apply_test_results(
     test_results: Optional[Sequence[Mapping]],
     section_targets: Sequence[Tuple[str, Sequence[str]]] = (),
     report: Optional[List[dict]] = None,
+    gender: str = "boy",
+    finalize=None,
 ) -> BytesIO:
     """``report``, if given, receives one dict per test saying what was done
-    (``result``: "filled" / "replaced" / "added", plus fill details)."""
+    (``result``: "filled" / "replaced" / "added", plus fill details; ``layout`` when the
+    template's tables were swapped for the layout the pasted tables are in).
+    ``gender`` picks the boy or girl wording of tables brought in from a Sunny Hill
+    template; ``finalize`` is applied to every element brought in (the export uses it to
+    put the child's name in place of the template's "Joe" and drop the highlighting)."""
     groups = _merge_groups(test_results or [])
     if not groups:
         docx_stream.seek(0)
@@ -116,10 +123,14 @@ def apply_test_results(
     font = _body_font(body)
     boundary_headings = {_norm(alias) for _, aliases in section_targets for alias in aliases}
     for name, items, mode in groups:
+        layout = _use_pasted_layout(body, name, items, mode, boundary_headings, gender, finalize)
         outcome = _place_in_template_block(document, body, name, items, boundary_headings, font, mode)
         if not outcome:
             _append_block(document, body, name, items, font)
             outcome = {"result": "added"}
+        if layout:
+            outcome["layout"] = layout
+            outcome["layout_label"] = score_layouts.LABELS.get(layout, layout)
         if report is not None:
             report.append({"test_name": name, **outcome})
 
@@ -218,6 +229,72 @@ def _merge_groups(test_results: Iterable[Mapping]) -> List[Tuple[str, List[Mappi
 
 
 # --------------------------------------------------------------------------- #
+# the clinic has two table layouts for WISC-V and for ABAS-3: use the one pasted
+# --------------------------------------------------------------------------- #
+def _use_pasted_layout(body, name: str, items: List[Mapping], mode: str, boundary_headings, gender: str, finalize) -> Optional[str]:
+    """If the pasted tables are in one of the clinic's layouts and the template's tables for
+    the test are in another, swap the template's blank tables for the blank tables of the
+    pasted layout so the fill (and the report) uses that layout. Returns the layout used."""
+    table_items = [i for i in items if i.get("kind") == "table"]
+    if mode != "fill" or not table_items:
+        return None
+    token = _norm(name).replace(" ", "")
+    wanted = score_layouts.wanted_layout(token, table_items)
+    if not wanted:
+        return None
+    shells = _template_tables_for(body, name, boundary_headings)
+    if not shells or score_layouts.layout_of(token, shells) in (wanted, None):
+        return None   # no tables to swap, already that layout, or a layout we don't know
+    donor = score_layouts.donor_elements(wanted, gender)
+    if not any(el.tag == TBL for el in donor):
+        return None
+    if finalize is not None:
+        for element in donor:
+            finalize(element)
+
+    children = list(body)
+    order = {id(el): i for i, el in enumerate(children)}
+    notes = [note for table in shells if (note := _add_rows_instruction_above(table)) is not None]
+    remove = list({id(el): el for el in shells + _labels_for(shells, children, 0) + notes}.values())
+    first = min(remove, key=lambda el: order[id(el)])
+    for element in donor:
+        first.addprevious(element)
+    for element in remove:
+        element.getparent().remove(element)
+    return wanted
+
+
+def _add_rows_instruction_above(table):
+    """The template's note to staff above its supplementary-subtests table ("Additional
+    subtests to add into table (with your cursor on the table, right click ...)"). It goes
+    with the table it is about."""
+    previous = table.getprevious()
+    while previous is not None and previous.tag == P and not _text(previous):
+        previous = previous.getprevious()
+    if previous is not None and previous.tag == P and _text(previous).lower().startswith("additional subtests to add into table"):
+        return previous
+    return None
+
+
+def _template_tables_for(body, name: str, boundary_headings) -> List:
+    """The template's own score tables for a test, found the same way the fill finds them."""
+    token = _norm(name).replace(" ", "")
+    if re.fullmatch(r"[a-z]+\d+", token):
+        owned = _owned_tables(body, token)
+        if owned:
+            return owned
+    children = list(body)
+    family = _family(name)
+    anchors, heading_anchors = _anchors_for(children, name, True, boundary_headings)
+    for anchor in anchors:
+        if anchor in heading_anchors:
+            shells = [el for el in children[anchor:_block_end(children, anchor, family, boundary_headings)] if el.tag == TBL]
+            if shells:
+                return shells
+    return []
+
+
+# --------------------------------------------------------------------------- #
 # placing into the template's own block for the test
 # --------------------------------------------------------------------------- #
 def _place_in_template_block(
@@ -225,9 +302,6 @@ def _place_in_template_block(
     mode: str = "fill",
 ) -> Optional[dict]:
     """Returns what was done ({"result": ...}) or None if the template has no block for the test."""
-    children = list(body)
-    family = _family(name)
-    exact = _norm(name).replace(" ", "")
     has_tables = any(i.get("kind") == "table" for i in items)
     has_images = any(i.get("kind") == "image" for i in items)
 
@@ -236,40 +310,9 @@ def _place_in_template_block(
         if outcome:
             return outcome
 
-    candidates: Dict[str, List[int]] = {"eh": [], "fh": [], "ea": [], "fa": []}
-    for index, element in enumerate(children):
-        if element.tag != P:
-            continue
-        raw = _text(element)
-        norm = _norm(raw)
-        if not norm:
-            continue
-        is_exact = exact in norm.replace(" ", "")
-        if not (is_exact or _has_family(norm, family)):
-            continue
-        if _PLACEHOLDER.match(raw):
-            continue  # "(insert WISC-V graph here)" is part of a block, not its heading
-        head = len(raw) <= HEADING_MAX_CHARS
-        candidates[("e" if is_exact else "f") + ("h" if head else "a")].append(index)
-
-    heading_anchors = set(candidates["eh"] + candidates["fh"])  # real headings, not a sentence that mentions the test
-
-    def gap(anchor: int) -> int:
-        """How far the first blank table / graph placeholder is below this heading. The heading
-        right above a test's tables is its block; an entry in the "Tests Administered" list that
-        happens to run into them (when the list around it was trimmed) is much further up."""
-        block = children[anchor:_block_end(children, anchor, family, boundary_headings)]
-        found = [
-            n for n, el in enumerate(block)
-            if (has_tables and el.tag == TBL) or (not has_tables and el.tag == P and _PLACEHOLDER.match(_text(el) or "x"))
-        ]
-        return found[0] if found else 10**9
-
-    ordered_anchors = [
-        anchor
-        for group in ("eh", "fh", "ea", "fa")
-        for anchor in sorted(candidates[group], key=gap)
-    ]
+    children = list(body)
+    family = _family(name)
+    ordered_anchors, heading_anchors = _anchors_for(children, name, has_tables, boundary_headings)
     for anchor in ordered_anchors:
         end = _block_end(children, anchor, family, boundary_headings)
         block = children[anchor:end]
@@ -313,6 +356,48 @@ def _place_in_template_block(
     return None
 
 
+def _anchors_for(children, name: str, has_tables: bool, boundary_headings) -> Tuple[List[int], set]:
+    """Where in the template a test's block could start, best first, and which of those are
+    real headings (rather than a sentence that mentions the test)."""
+    family = _family(name)
+    exact = _norm(name).replace(" ", "")
+    candidates: Dict[str, List[int]] = {"eh": [], "fh": [], "ea": [], "fa": []}
+    for index, element in enumerate(children):
+        if element.tag != P:
+            continue
+        raw = _text(element)
+        norm = _norm(raw)
+        if not norm:
+            continue
+        is_exact = exact in norm.replace(" ", "")
+        if not (is_exact or _has_family(norm, family)):
+            continue
+        if _PLACEHOLDER.match(raw):
+            continue  # "(insert WISC-V graph here)" is part of a block, not its heading
+        head = len(raw) <= HEADING_MAX_CHARS
+        candidates[("e" if is_exact else "f") + ("h" if head else "a")].append(index)
+
+    heading_anchors = set(candidates["eh"] + candidates["fh"])  # real headings, not a sentence that mentions the test
+
+    def gap(anchor: int) -> int:
+        """How far the first blank table / graph placeholder is below this heading. The heading
+        right above a test's tables is its block; an entry in the "Tests Administered" list that
+        happens to run into them (when the list around it was trimmed) is much further up."""
+        block = children[anchor:_block_end(children, anchor, family, boundary_headings)]
+        found = [
+            n for n, el in enumerate(block)
+            if (has_tables and el.tag == TBL) or (not has_tables and el.tag == P and _PLACEHOLDER.match(_text(el) or "x"))
+        ]
+        return found[0] if found else 10**9
+
+    ordered_anchors = [
+        anchor
+        for group in ("eh", "fh", "ea", "fa")
+        for anchor in sorted(candidates[group], key=gap)
+    ]
+    return ordered_anchors, heading_anchors
+
+
 def _fill_block(document, block, shells, placeholders, items: List[Mapping], font: Optional[str]) -> Optional[dict]:
     """Fill the template's own score tables from the uploaded tables, leaving their
     look alone. Graphs (and uploaded tables that aren't score tables, so can't be
@@ -326,7 +411,7 @@ def _fill_and_place(document, shells, placeholders, items: List[Mapping], font: 
     records = parse_source_tables(table_items)
     if not records:
         return None
-    stats = fill_template_tables(shells, records)
+    stats = fill_template_tables(shells, records, [_caption_above(table) for table in shells])
     if not stats.filled:
         return None
 
@@ -346,6 +431,15 @@ def _fill_and_place(document, shells, placeholders, items: List[Mapping], font: 
         _insert_items(document, marker, extras, heading=None, font=font)
         marker.getparent().remove(marker)
     return {"result": "filled", **summarize(stats)}
+
+
+def _caption_above(table) -> str:
+    """The text of the nearest non-empty paragraph above a table ("ABAS-3 Score Summary Table: Teacher")."""
+    previous = table.getprevious()
+    while previous is not None and previous.tag == P and not _text(previous):
+        previous = previous.getprevious()
+    caption = _text(previous) if previous is not None and previous.tag == P else ""
+    return caption if len(caption) <= HEADING_MAX_CHARS else ""   # a paragraph of prose is not a caption
 
 
 _TOKEN = re.compile(r"(?<![a-z0-9])([a-z]{2,8})(\d+)(?![a-z0-9])")
@@ -386,8 +480,10 @@ def _table_groups(body) -> List[Tuple[object, Optional[str]]]:
         tagged = _test_token(header)
         if tagged:
             current = tagged
-        elif _norm(header) in ("index", "indexes", "indices") or not header:
-            current = None  # a new group that names no version
+        elif "subtest" not in _norm(header):
+            # Only a subtests table ("VCI Subtests") carries on the group above. Anything
+            # else ("Index", ABAS-3's "Composite") starts a group that names no version.
+            current = None
         groups.append((table, current))
     return groups
 

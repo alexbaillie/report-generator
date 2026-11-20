@@ -287,7 +287,12 @@ def create_report_docx(
         patched_xml, template_path,
         _patched_header_footer_parts(template_path, clean_name, metadata.get("chart number", "")),
     )
-    result = apply_test_results(patched, test_results, section_targets, fill_report)
+    def finalize(element):  # tables brought in later get the same clean-up as the rest of the template
+        _replace_placeholder_names(element, clean_name)
+        _strip_highlighting(element)
+
+    gender = "girl" if template_path in (CDBC_GIRL_TEMPLATE_PATH, PSYCHED_GIRL_TEMPLATE_PATH) else "boy"
+    result = apply_test_results(patched, test_results, section_targets, fill_report, gender=gender, finalize=finalize)
     if pruned_entry is not None and fill_report is not None:
         fill_report.append(pruned_entry)  # after the per-test entries, which tests index from the front
     return result

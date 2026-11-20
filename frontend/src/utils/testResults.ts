@@ -169,6 +169,9 @@ export interface FillSummary {
   /** pruned: the template's tests that were taken out because they were not marked as administered */
   removed?: string[];
   filled?: number;
+  /** the template's tables were swapped for the layout the pasted tables are in (WISC-V by index, ABAS-3 parent + teacher) */
+  layout?: string;
+  layout_label?: string;
   tables_filled?: number;
   not_administered?: string[];
   not_in_report?: string[];
@@ -200,6 +203,9 @@ export function describeFill(summary: FillSummary): string[] {
     lines.push(`${summary.test_name}: the template's score tables were replaced with the uploaded tables.`);
   } else {
     lines.push(`${summary.test_name}: the template has no section for this test, so its results were added as a new block.`);
+  }
+  if (summary.layout_label) {
+    lines.push(`${summary.test_name}: the template's tables were changed to ${summary.layout_label}, the layout of the tables you added.`);
   }
   const notes: Array<[string[] | undefined, string]> = [
     [summary.not_administered, 'Marked "-" in the score report, shown as "Not assessed"'],
